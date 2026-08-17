@@ -1,3 +1,5 @@
 chrome_history_archive.db
 *history.json
 rotten.pem
+build-pkg.sh
+.DS_Store

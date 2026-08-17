@@ -60,13 +60,13 @@ function isGithubNoise(host, pathname) {
 // LinkedIn allowlist: keep only other people's contact pages and
 // individual posts/company posts-listings; delete everything else on the
 // domain (feed, search, network browsing, the OAuth/2FA chain, own
-// profile, saved posts). Own-profile slug is hardcoded - update if it
+// profile, saved posts). Own-profile pattern is hardcoded - update if it
 // ever changes.
-const LI_OWN_SLUG = "brock-walters-247a2990";
+const LI_OWN_PROFILE_RE = /^\/in\/brock-walters-247a2990(\/|$)/;
 
 function isLinkedInNoise(host, pathname) {
   if (!["www.linkedin.com", "linkedin.com"].includes(host)) return false;
-  const isContact = pathname.startsWith("/in/") && !pathname.includes(LI_OWN_SLUG);
+  const isContact = pathname.startsWith("/in/") && !LI_OWN_PROFILE_RE.test(pathname);
   const isPost =
     pathname.startsWith("/feed/update/urn:li:activity:") ||
     (pathname.includes("/company/") && pathname.includes("/posts"));
@@ -260,7 +260,7 @@ async function notifyNewHost(host, title, url) {
     iconUrl: "icon128.png",
     title: `New site: ${host}`,
     message: title || url,
-    buttons: [{ title: "Keep" }, { title: "Delete future visits" }],
+    buttons: [{ title: "Allow" }, { title: "Deny future visits" }],
     requireInteraction: true,
   });
   const map = await getNotificationMap();
@@ -306,7 +306,7 @@ chrome.notifications.onButtonClicked.addListener(async (notifId, buttonIndex) =>
   const map = await getNotificationMap();
   const host = map[notifId];
   if (!host) return;
-  await resolveHost(host, buttonIndex === 0 ? "keep" : "delete");
+  await resolveHost(host, buttonIndex === 0 ? "allow" : "deny");
   delete map[notifId];
   await setNotificationMap(map);
   chrome.notifications.clear(notifId);
@@ -381,10 +381,10 @@ chrome.history.onVisited.addListener(async (item) => {
     const rules = await getRules();
     const rule = matchRule(rules, host, pathname);
     if (rule) {
-      if (rule.action === "delete") {
+      if (rule.action === "deny") {
         chrome.history.deleteUrl({ url });
       }
-      return; // action === "keep" -> leave it alone
+      return; // action === "allow" -> leave it alone
     }
 
     const pending = await getPending();
@@ -415,7 +415,7 @@ chrome.history.onVisited.addListener(async (item) => {
 chrome.runtime.onInstalled.addListener(updateBadge);
 chrome.runtime.onStartup.addListener(updateBadge);
 
-// popup.js routes its keep/delete/dismiss actions through here instead of
+// popup.js routes its allow/deny/dismiss actions through here instead of
 // writing to storage directly, so every pending/rules mutation - whether
 // triggered by a notification button or the popup - goes through the same
 // storageQueue and can't race with an in-flight onVisited handler.

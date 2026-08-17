@@ -7,7 +7,7 @@
 		<dict>
 			<key>ExtensionInstallForcelist</key>
 			<array>
-				<string>ecacakfhcekecbfldhjkmolceacminjg;file:///Users/Shared/rotten/updates.xml</string>
+				<string>eooakipdlgnknkphlmmlmbnebbjcelbl;file:///Users/Shared/rotten/updates.xml</string>
 			</array>
 			<key>PayloadDisplayName</key>
 			<string>Rotten Extension Force-Install</string>

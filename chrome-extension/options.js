@@ -1,14 +1,13 @@
 const HARD_RULES = [
-  { rule: "Bookmarked", matches: "Any URL that's also in your Chrome Bookmarks (exact match)" },
-  { rule: "Cloudflare interstitial", matches: 'Title is exactly "Just a moment..." AND the URL contains __cf_chl' },
-  { rule: "Auth keyword", matches: "URL contains login, oauth, auth, signin, or sign-in as an exact word (not substring - authentication doesn't count)" },
-  { rule: "Search results", matches: "duckduckgo.com/?q=... or google.com/search?q=... (bare homepages are unaffected)" },
-  { rule: "Whole-domain noise", matches: "accounts.google.com, calendar.google.com, chat.google.com, mail.google.com, meet.google.com — every path deleted" },
-  { rule: "Bare-homepage noise", matches: "drive.google.com — only the bare homepage is deleted, anything with a path is left alone" },
-  { rule: "YouTube duplicate merge", matches: "Same v= video id seen again → the later visit is deleted, first-seen instance is kept" },
-  { rule: "Google Docs duplicate merge", matches: "Same /d/<doc id>/ seen again (Docs/Slides/Sheets) → the later visit is deleted, first-seen instance is kept" },
-  { rule: "GitHub path rules", matches: "Delete: search, login/sessions, settings/*, edit, compare, tree, invitations, bare org/user profile. Keep: blob, issues/pull, bare repo." },
-  { rule: "LinkedIn allowlist", matches: "Keep only: other people's /in/<slug> contact pages (not your own) and posts/company-posts pages. Delete everything else on the domain." },
+  { rule: "Authorization / login keywords", matches: "URLs containing exact matches for the words auth, oauth, login, signin, or sign-in are deleted." },
+  { rule: "Bookmarked links", matches: "Any URL that exactly matches a bookmarked URL is deleted from the browser history." },
+  { rule: "Browser search results", matches: "URLs for searches on google.com or duckduckgo.com are deleted." },
+  { rule: "Cloudflare redirection", matches: 'Any page titled exactly "Just a moment..." whose URL also contains __cf_chl is deleted - this is Cloudflare\'s temporary "checking your browser" screen, not the real page underneath it.' },
+  { rule: "GitHub", matches: "On github.com: delete search results, login/session pages, settings pages, and (within a repo) the edit, compare, and tree pages. Keep everything else - including bare profile pages, bare repo pages, file views, issues, pull requests, and invitations." },
+  { rule: "Google Docs & Drive", matches: "The first visit to a given Google Doc, Sheet, Slide, or Drive file/folder is kept; any later visit to that same item - even with different tracking parameters - is deleted." },
+  { rule: "Google service domains", matches: "Every URL on accounts.google.com, calendar.google.com, chat.google.com, mail.google.com, or meet.google.com is deleted, regardless of path. drive.google.com is treated differently: only its bare top-level homepage is deleted - any real link on drive.google.com is left alone." },
+  { rule: "LinkedIn", matches: "On linkedin.com: keep only other people's profile pages and individual posts (including company post listings). Delete everything else - including your own profile, feed, search, network browsing, and login pages." },
+  { rule: "YouTube", matches: "The first visit to a given YouTube video is kept; any later visit to the same video - even with different tracking parameters - is deleted." },
 ];
 
 function renderHardRules() {

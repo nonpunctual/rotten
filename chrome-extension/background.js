@@ -42,20 +42,18 @@ function isBareHomepageNoise(host, pathname) {
 }
 
 // GitHub path-category rules. Delete: search results, login/sessions,
-// settings/*, edit-mode, branch compare, directory browsing (tree),
-// invitations, bare org/user profile pages. Keep: file views (blob),
-// issues/pull, bare repo pages (default keep, bookmark rule handles it if
-// bookmarked).
+// settings/*, edit-mode, branch compare, directory browsing (tree). Keep:
+// file views (blob), issues/pull, bare org/user profile pages, bare repo
+// pages, invitations (default keep, bookmark rule handles it if bookmarked).
 const GITHUB_DELETE_TOP = ["search", "login", "sessions", "settings"];
-const GITHUB_DELETE_CATEGORY = ["edit", "compare", "tree", "invitations"];
+const GITHUB_DELETE_CATEGORY = ["edit", "compare", "tree"];
 
 function isGithubNoise(host, pathname) {
   if (host !== "github.com") return false;
   const parts = pathname.split("/").filter(Boolean);
   if (parts.length === 0) return false; // bare homepage - not covered, leave alone
   if (GITHUB_DELETE_TOP.includes(parts[0])) return true;
-  if (parts.length === 1) return true; // bare org/user profile
-  if (parts.length === 2) return false; // bare repo - kept by default
+  if (parts.length <= 2) return false; // bare profile or bare repo - kept by default
   return GITHUB_DELETE_CATEGORY.includes(parts[2]);
 }
 
@@ -75,12 +73,13 @@ function isLinkedInNoise(host, pathname) {
   return !(isContact || isPost);
 }
 
-// YouTube/Google Docs duplicate merging. Each tracking/session-param variant
-// (list=, index=, sttick=, slide=, pli=, ...) is its own distinct URL, so
-// this doesn't need to scan existing history like the generic repeat-visit
-// trim would - it just remembers the first video/doc id it sees (the
-// keeper) and deletes any later variant of the same id as it comes in.
-// First-seen-wins, no retroactive lookback, same as everything else here.
+// YouTube/Google Docs/Google Drive duplicate merging. Each tracking/session-
+// param variant (list=, index=, sttick=, slide=, pli=, ...) is its own
+// distinct URL, so this doesn't need to scan existing history like the
+// generic repeat-visit trim would - it just remembers the first video/doc/
+// file/folder id it sees (the keeper) and deletes any later variant of the
+// same id as it comes in. First-seen-wins, no retroactive lookback, same as
+// everything else here.
 
 function extractYouTubeVideoId(url) {
   let u;
@@ -106,6 +105,25 @@ function extractGoogleDocId(url) {
   return m ? m[2] : null;
 }
 
+// Covers the same drive.google.com that isBareHomepageNoise also matches -
+// that rule only ever fires on the bare root (no id to extract), so the two
+// don't overlap: a file/folder URL always has an id and lands here instead.
+function extractGoogleDriveId(url) {
+  let u;
+  try {
+    u = new URL(url);
+  } catch (e) {
+    return null;
+  }
+  if (u.hostname !== "drive.google.com") return null;
+  let m = u.pathname.match(/^\/file\/d\/([^/]+)/);
+  if (m) return m[1];
+  m = u.pathname.match(/^\/drive\/(?:u\/\d+\/)?folders\/([^/]+)/);
+  if (m) return m[1];
+  if (u.pathname === "/open") return u.searchParams.get("id");
+  return null;
+}
+
 // Serializes every storage read-modify-write section below so overlapping
 // onVisited invocations (and messages from the popup) can't interleave
 // their get/set calls and silently drop each other's writes.
@@ -121,8 +139,14 @@ function withStorageLock(fn) {
 
 async function getCanonicalStore() {
   const { canonical } = await chrome.storage.local.get({
-    canonical: { youtube: {}, googleDocs: {} },
+    canonical: { youtube: {}, googleDocs: {}, googleDrive: {} },
   });
+  // Backfill buckets missing from a store written before they existed -
+  // chrome.storage.local.get()'s default only applies when the whole
+  // "canonical" key is absent, not per missing sub-key.
+  canonical.youtube = canonical.youtube || {};
+  canonical.googleDocs = canonical.googleDocs || {};
+  canonical.googleDrive = canonical.googleDrive || {};
   return canonical;
 }
 async function setCanonicalStore(canonical) {
@@ -130,16 +154,17 @@ async function setCanonicalStore(canonical) {
 }
 
 // Returns true if this visit was a duplicate and got deleted; false if it's
-// the first-seen instance for its canonical id (kept) or doesn't match
-// either pattern at all.
+// the first-seen instance for its canonical id (kept) or doesn't match any
+// of the three id patterns at all.
 async function handleCanonicalDuplicate(url) {
   const videoId = extractYouTubeVideoId(url);
   const docId = videoId ? null : extractGoogleDocId(url);
-  if (!videoId && !docId) return false;
+  const driveId = videoId || docId ? null : extractGoogleDriveId(url);
+  if (!videoId && !docId && !driveId) return false;
 
   const canonical = await getCanonicalStore();
-  const bucket = videoId ? canonical.youtube : canonical.googleDocs;
-  const key = videoId || docId;
+  const bucket = videoId ? canonical.youtube : docId ? canonical.googleDocs : canonical.googleDrive;
+  const key = videoId || docId || driveId;
 
   if (bucket[key]) {
     chrome.history.deleteUrl({ url });

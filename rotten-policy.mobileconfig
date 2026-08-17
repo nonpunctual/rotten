@@ -5,30 +5,30 @@
 	<key>PayloadContent</key>
 	<array>
 		<dict>
-			<key>PayloadType</key>
-			<string>com.google.Chrome</string>
-			<key>PayloadIdentifier</key>
-			<string>com.rotten.chromepolicy.forcelist</string>
-			<key>PayloadUUID</key>
-			<string>E62C14D1-C50A-4877-AC92-38E2228053FD</string>
-			<key>PayloadVersion</key>
-			<integer>1</integer>
-			<key>PayloadDisplayName</key>
-			<string>Rotten Extension Force-Install</string>
 			<key>ExtensionInstallForcelist</key>
 			<array>
 				<string>ecacakfhcekecbfldhjkmolceacminjg;file:///Users/Shared/rotten/updates.xml</string>
 			</array>
+			<key>PayloadDisplayName</key>
+			<string>Rotten Extension Force-Install</string>
+			<key>PayloadIdentifier</key>
+			<string>com.rotten.chromepolicy.forcelist</string>
+			<key>PayloadType</key>
+			<string>com.google.Chrome</string>
+			<key>PayloadUUID</key>
+			<string>E62C14D1-C50A-4877-AC92-38E2228053FD</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
 		</dict>
 	</array>
 	<key>PayloadDisplayName</key>
 	<string>Rotten Chrome Policy</string>
 	<key>PayloadIdentifier</key>
 	<string>com.rotten.chromepolicy</string>
-	<key>PayloadUUID</key>
-	<string>B091E9D3-EE18-4D7F-AAB9-C69094A54387</string>
 	<key>PayloadType</key>
 	<string>Configuration</string>
+	<key>PayloadUUID</key>
+	<string>B091E9D3-EE18-4D7F-AAB9-C69094A54387</string>
 	<key>PayloadVersion</key>
 	<integer>1</integer>
 </dict>

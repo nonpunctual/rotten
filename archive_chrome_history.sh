@@ -1,18 +1,22 @@
 #!/bin/bash
 #
-# Archive Chrome's local History into a day-partitioned archive DB.
+# Archive the Google Chrome browser history.
 #
-# Read-only with respect to Chrome's History: nothing is ever deleted or
-# rewritten there. For every profile, all current visits are grouped by
-# calendar day and upserted into chrome_history_archive.db, so that history
-# surviving past Chrome's own retention window (~90 days) isn't lost.
+# This script is read-only with respect to Chrome's history. It 
+# does not delete or overwrite the Chrome history database file. 
 #
-# A day's row is fully overwritten on every run for as long as that day
-# still has live visits in Chrome's History - covers re-running the script
-# multiple times before a day ages out. Once a day has no more live visits
-# (Chrome purged it past the 90-day window), that day is absent from the
-# SELECT below and is therefore never touched again - frozen permanently,
-# with no separate "is this frozen" logic needed.
+# When run, for every Chrome profile, visits are grouped by calendar
+# day and upserted into a separate chrome_history_archive.db file.
+# This creates a stand-alone archive that survives the Google
+# Chrome 90 day browser history retention window.
+#
+# A day's row is fully overwritten on every script run for as long
+# as that day still has live visits in Chrome's history. This covers
+# running the script multiple times before a day ages out. Once a
+# day has no more live visits (i.e., Chrome has purged it past the
+# 90-day retention window), that day is absent from the SELECT operation
+# and is therefore never touched again - that day's row is frozen
+# permanently.
 #
 # Usage:
 #   ./archive_chrome_history.sh --dry-run   # preview what would be archived

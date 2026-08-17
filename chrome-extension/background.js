@@ -325,6 +325,10 @@ chrome.notifications.onClosed.addListener(async (notifId) => {
 
 chrome.history.onVisited.addListener(async (item) => {
   const url = item.url;
+  // Only ever act on real web pages - chrome-extension:// (including this
+  // extension's own options/popup pages), chrome://, file://, etc. should
+  // never enter discovery or the hard rules.
+  if (!/^https?:\/\//i.test(url)) return;
   const host = getHost(url);
   if (!host) return;
 

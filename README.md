@@ -60,3 +60,17 @@ The `rotten-policy.mobileconfig` Configuration Profile force-installs the extens
 ```
 
 The `repack.sh` handles extension build automation. It will reuse the `rotten.pem` file for extension signing to keep the id stable. If the key is missing, the script will generate a new `.pem` file.
+
+Notes:
+
+1. Reload the extension to pick up current code
+- Go to chrome://extensions
+- Find the unpacked extension
+- Click the reload icon (circular arrow) on its card
+
+2. To Clear the stale/conflicting storage:
+- On that same card, click "service worker"
+- In that console, type "allow pasting"
+- Run: `chrome.storage.local.clear().then(() => console.log("cleared"))`
+- Verify it's empty: `chrome.storage.local.get(null, console.log)`
+  - result should be `{}`

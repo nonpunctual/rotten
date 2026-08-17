@@ -57,16 +57,14 @@ function isGithubNoise(host, pathname) {
   return GITHUB_DELETE_CATEGORY.includes(parts[2]);
 }
 
-// LinkedIn allowlist: keep only other people's contact pages and
-// individual posts/company posts-listings; delete everything else on the
-// domain (feed, search, network browsing, the OAuth/2FA chain, own
-// profile, saved posts). Own-profile pattern is hardcoded - update if it
-// ever changes.
-const LI_OWN_PROFILE_RE = /^\/in\/brock-walters-247a2990(\/|$)/;
-
+// LinkedIn allowlist: keep profile pages (anyone's, including your own -
+// add a learned deny rule scoped to your own /in/<slug> path if you want
+// that excluded) and individual posts/company posts-listings; delete
+// everything else on the domain (feed, search, network browsing, the
+// OAuth/2FA chain, saved posts).
 function isLinkedInNoise(host, pathname) {
   if (!["www.linkedin.com", "linkedin.com"].includes(host)) return false;
-  const isContact = pathname.startsWith("/in/") && !LI_OWN_PROFILE_RE.test(pathname);
+  const isContact = pathname.startsWith("/in/");
   const isPost =
     pathname.startsWith("/feed/update/urn:li:activity:") ||
     (pathname.includes("/company/") && pathname.includes("/posts"));
@@ -191,6 +189,18 @@ function getPath(url) {
   }
 }
 
+// One level of percent-decoding so a scope like "id.atlassian.com" can match
+// inside an encoded query param (e.g. redirectTo=https%3A%2F%2Fid.atlassian.com%2F...)
+// without the caller having to know the URL was ever encoded. Falls back to
+// the raw string on malformed escapes instead of throwing.
+function decodeLoose(url) {
+  try {
+    return decodeURIComponent(url);
+  } catch (e) {
+    return url;
+  }
+}
+
 async function isBookmarked(url) {
   try {
     const results = await chrome.bookmarks.search({ url });
@@ -218,14 +228,18 @@ async function setPending(pending) {
   await chrome.storage.local.set({ pending });
 }
 
-// Most-specific pathPrefix match wins; a host-only rule (pathPrefix null) is the fallback.
-function matchRule(rules, host, pathname) {
+// Scope matches anywhere in the decoded full URL (path, query string, all of
+// it) - not just as a path prefix - so a rule can target something buried in
+// a query param (e.g. a redirectTo=... value) as well as a plain path.
+// Most-specific (longest scope) match wins; a host-only rule (scope null) is
+// the fallback.
+function matchRule(rules, host, decodedUrl) {
   let best = null;
   for (const r of rules) {
     if (r.host !== host) continue;
-    if (r.pathPrefix) {
-      if (pathname.startsWith(r.pathPrefix)) {
-        if (!best || !best.pathPrefix || best.pathPrefix.length < r.pathPrefix.length) {
+    if (r.scope) {
+      if (decodedUrl.includes(r.scope)) {
+        if (!best || !best.scope || best.scope.length < r.scope.length) {
           best = r;
         }
       }
@@ -269,23 +283,22 @@ async function notifyNewHost(host, title, url) {
 }
 
 // Normalizes a user-edited scope value: trims, drops it entirely if blank
-// (host-wide rule), and adds a leading slash if missing so a typo like
-// "org/repo" still matches via pathname.startsWith() instead of silently
-// never matching.
-function normalizePathPrefix(pathPrefix) {
-  if (!pathPrefix) return null;
-  const trimmed = pathPrefix.trim();
-  if (!trimmed) return null;
-  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+// (host-wide rule). No leading-slash normalization - scope is matched as a
+// substring anywhere in the URL, so it might legitimately be a bare path
+// segment, a query param value, or a snippet with no slash at all.
+function normalizeScope(scope) {
+  if (!scope) return null;
+  const trimmed = scope.trim();
+  return trimmed || null;
 }
 
 // No retroactive deletion, ever: this only records the rule for future
 // visits going forward. Whatever's already in history for this host,
 // including the visit that triggered the prompt, is left untouched.
-async function resolveHost(host, action, pathPrefix = null) {
+async function resolveHost(host, action, scope = null) {
   return withStorageLock(async () => {
     const rules = await getRules();
-    rules.push({ host, pathPrefix: normalizePathPrefix(pathPrefix), action, createdAt: Date.now() });
+    rules.push({ host, scope: normalizeScope(scope), action, createdAt: Date.now() });
     await setRules(rules);
 
     const pending = await getPending();
@@ -383,7 +396,7 @@ chrome.history.onVisited.addListener(async (item) => {
     }
 
     const rules = await getRules();
-    const rule = matchRule(rules, host, pathname);
+    const rule = matchRule(rules, host, decodeLoose(url));
     if (rule) {
       if (rule.action === "deny") {
         chrome.history.deleteUrl({ url });
@@ -425,7 +438,7 @@ chrome.runtime.onStartup.addListener(updateBadge);
 // storageQueue and can't race with an in-flight onVisited handler.
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "resolvePending") {
-    resolveHost(message.host, message.action, message.pathPrefix).then(async () => {
+    resolveHost(message.host, message.action, message.scope).then(async () => {
       sendResponse({ pending: await getPending() });
     });
     return true;

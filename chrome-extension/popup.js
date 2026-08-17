@@ -62,8 +62,8 @@ document.getElementById("list").addEventListener("click", async (e) => {
   // dismissPending in background.js.
   let message;
   if (action === "allow" || action === "deny") {
-    const pathPrefix = itemEl.querySelector(".prefix-input").value.trim() || null;
-    message = { type: "resolvePending", host, action, pathPrefix };
+    const scope = itemEl.querySelector(".prefix-input").value.trim() || null;
+    message = { type: "resolvePending", host, action, scope };
   } else {
     message = { type: "dismissPending", host };
   }

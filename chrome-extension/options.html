@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Rotten — Rules</title>
+<style>
+  body { font-family: -apple-system, sans-serif; font-size: 13px; max-width: 640px; margin: 24px auto; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #ddd; }
+  button { cursor: pointer; }
+  .empty { color: #666; padding: 12px 0; }
+  .subtitle { color: #666; margin: -8px 0 12px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <h1>Built-in rules</h1>
+  <div class="subtitle">Always applied, always delete, not editable here — these are baked into the code.</div>
+  <table>
+    <thead><tr><th>Rule</th><th>Matches</th></tr></thead>
+    <tbody id="hardRows"></tbody>
+  </table>
+
+  <h1>Learned rules</h1>
+  <div class="subtitle">Built from what you've answered so far.</div>
+  <table>
+    <thead><tr><th>Host</th><th>Path prefix</th><th>Action</th><th></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <script src="options.js"></script>
+</body>
+</html>

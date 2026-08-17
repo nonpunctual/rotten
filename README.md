@@ -20,7 +20,7 @@ Built-in rules:
 | GitHub | Search results, login/session pages, settings pages, and (within a repo) the edit, compare, and tree pages are deleted from the browser history. Everything else (bare profile pages, bare repo pages, file views, issues, pull requests, and invitations) is kept. |
 | Google Docs & Drive | The first visit to a given Google Doc, Sheet, Slide, or Drive file/folder is kept; any later visits to the same item (even if the URLs have different tracking parameters) are deleted from the browser history. |
 | Google service domains | Every URL on "accounts.google.com", "calendar.google.com", "chat.google.com", "mail.google.com", or "meet.google.com" is deleted from the browser history. URLs containing "drive.google.com" are treated differently - only the bare top-level homepage is deleted. Real links on "drive.google.com" are kept. |
-| LinkedIn | Other people's profile pages and individual posts (including company post listings) are kept. All other URLs (including your own profile, feed, search, network browsing, and login pages) are deleted from the browser history. |
+| LinkedIn | Profile page visits and post links (including company posts) are kept. All other URLs (feed, search, network browsing, and login pages) are deleted from the browser history. |
 | YouTube | The first visit to a given YouTube video is kept. Later visits to the same video (even if the URLs have different tracking parameters) is deleted from the browser history. |
 
 Rotten also includes `archive_chrome_history.sh`: a standalone script that archives the Google Chrome history into a day-partitioned SQLite database separate from the history database in the app which allows your browsing history to survive past Chrome's 90-day retention window.

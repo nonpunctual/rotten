@@ -6,7 +6,7 @@ const HARD_RULES = [
   { rule: "GitHub", matches: "Search results, login/session pages, settings pages, and (within a repo) the edit, compare, and tree pages are deleted from the browser history. Everything else (bare profile pages, bare repo pages, file views, issues, pull requests, and invitations) is kept." },
   { rule: "Google Docs & Drive", matches: "The first visit to a given Google Doc, Sheet, Slide, or Drive file/folder is kept; any later visits to the same item (even if the URLs have different tracking parameters) are deleted from the browser history." },
   { rule: "Google service domains", matches: 'Every URL on "accounts.google.com", "calendar.google.com", "chat.google.com", "mail.google.com", or "meet.google.com" is deleted from the browser history. URLs containing "drive.google.com" are treated differently - only the bare top-level homepage is deleted. Real links on "drive.google.com" are kept.' },
-  { rule: "LinkedIn", matches: "Profile pages (anyone's, including your own) and individual posts (including company post listings) are kept. All other URLs (feed, search, network browsing, login pages) are deleted from the browser history. Add your own deny rule below, scoped to your own /in/<slug> path, if you want your own profile visits deleted too." },
+  { rule: "LinkedIn", matches: "Profile page visits and post links (including company posts) are kept. All other URLs (feed, search, network browsing, and login pages) are deleted from the browser history." },
   { rule: "YouTube", matches: "The first visit to a given YouTube video is kept. Later visits to the same video (even if the URLs have different tracking parameters) is deleted from the browser history." },
 ];
 

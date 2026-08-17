@@ -36,8 +36,8 @@ function renderPending(pending) {
       )}" placeholder="(whole domain)"></label>
       </div>
       <div class="actions">
-        <button data-action="keep">Keep</button>
-        <button data-action="delete">Delete future visits</button>
+        <button data-action="allow">Allow</button>
+        <button data-action="deny">Deny future visits</button>
         <button data-action="dismiss">Skip for now</button>
       </div>
     </div>
@@ -57,11 +57,11 @@ document.getElementById("list").addEventListener("click", async (e) => {
   const host = itemEl.dataset.host;
   const action = btn.dataset.action;
 
-  // Both keep/delete/dismiss are handled by background.js, which serializes
+  // Both allow/deny/dismiss are handled by background.js, which serializes
   // them against onVisited's own storage writes - see resolvePending /
   // dismissPending in background.js.
   let message;
-  if (action === "keep" || action === "delete") {
+  if (action === "allow" || action === "deny") {
     const pathPrefix = itemEl.querySelector(".prefix-input").value.trim() || null;
     message = { type: "resolvePending", host, action, pathPrefix };
   } else {

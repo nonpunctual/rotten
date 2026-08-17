@@ -10,11 +10,12 @@
   button { cursor: pointer; }
   .empty { color: #666; padding: 12px 0; }
   .subtitle { color: #666; margin: -8px 0 12px; font-size: 12px; }
+  h2 { font-size: 15px; margin: 16px 0 8px; }
 </style>
 </head>
 <body>
   <h1>Built-in rules</h1>
-  <div class="subtitle">Always applied, always delete, not editable here — these are baked into the code.</div>
+  <div class="subtitle">Always applied, not editable here — these are baked into the code.</div>
   <table>
     <thead><tr><th>Rule</th><th>Matches</th></tr></thead>
     <tbody id="hardRows"></tbody>
@@ -22,9 +23,17 @@
 
   <h1>Learned rules</h1>
   <div class="subtitle">Built from what you've answered so far.</div>
+
+  <h2>Allow</h2>
   <table>
-    <thead><tr><th>Host</th><th>Path prefix</th><th>Action</th><th></th></tr></thead>
-    <tbody id="rows"></tbody>
+    <thead><tr><th>Host</th><th>Path prefix</th><th></th></tr></thead>
+    <tbody id="rowsAllow"></tbody>
+  </table>
+
+  <h2>Deny</h2>
+  <table>
+    <thead><tr><th>Host</th><th>Path prefix</th><th></th></tr></thead>
+    <tbody id="rowsDeny"></tbody>
   </table>
   <script src="options.js"></script>
 </body>

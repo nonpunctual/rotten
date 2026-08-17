@@ -63,12 +63,12 @@ The `repack.sh` handles extension build automation. It will reuse the `rotten.pe
 
 Notes:
 
-1. Reload the extension to pick up current code
-- Go to chrome://extensions
+1. To reload the extension to pick up the current code:
+- Go to `chrome://extensions`
 - Find the unpacked extension
 - Click the reload icon (circular arrow) on its card
 
-2. To Clear the stale/conflicting storage:
+2. To clear stale/conflicting storage:
 - On that same card, click "service worker"
 - In that console, type "allow pasting"
 - Run: `chrome.storage.local.clear().then(() => console.log("cleared"))`

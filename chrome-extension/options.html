@@ -11,18 +11,42 @@
   .empty { color: #666; padding: 12px 0; }
   .subtitle { color: #666; margin: -8px 0 12px; font-size: 12px; }
   h2 { font-size: 15px; margin: 16px 0 8px; }
+  #addForm { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  #addForm .field { display: flex; flex-direction: column; gap: 4px; }
+  #addForm label { font-size: 11px; color: #666; }
+  #addForm input, #addForm select { font-size: 13px; padding: 4px 6px; }
+  #addForm input[type="text"] { width: 220px; }
+  #addForm button { padding: 5px 12px; }
 </style>
 </head>
 <body>
   <h1>Built-in rules</h1>
-  <div class="subtitle">Always applied, not editable here — these are baked into the code.</div>
   <table>
     <thead><tr><th>Rule</th><th>Matches</th></tr></thead>
     <tbody id="hardRows"></tbody>
   </table>
 
   <h1>Learned rules</h1>
-  <div class="subtitle">Built from what you've answered so far.</div>
+
+  <h2>Add a rule</h2>
+  <form id="addForm">
+    <div class="field">
+      <label for="addHost">Host</label>
+      <input type="text" id="addHost" placeholder="www.example.com" required>
+    </div>
+    <div class="field">
+      <label for="addScope">Scope (optional)</label>
+      <input type="text" id="addScope" placeholder="(whole domain)">
+    </div>
+    <div class="field">
+      <label for="addAction">Action</label>
+      <select id="addAction">
+        <option value="allow">Allow</option>
+        <option value="deny">Deny</option>
+      </select>
+    </div>
+    <button type="submit">Add rule</button>
+  </form>
 
   <h2>Allow</h2>
   <table>

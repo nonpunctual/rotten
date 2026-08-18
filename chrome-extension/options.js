@@ -71,5 +71,57 @@ document.getElementById("rowsDeny").addEventListener("click", (e) => {
   if (e.target.tagName !== "BUTTON") return;
   removeRule(Number(e.target.dataset.i));
 });
+
+// Same "no leading-slash normalization, blank -> whole domain" behavior as
+// background.js's normalizeScope, since a rule added here has to match the
+// same way one added via the popup would.
+function normalizeScope(scope) {
+  if (!scope) return null;
+  const trimmed = scope.trim();
+  return trimmed || null;
+}
+
+// Lets a full URL be pasted into the host field instead of requiring the
+// bare hostname.
+function parseHost(input) {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      return new URL(trimmed).hostname;
+    } catch (e) {
+      return null;
+    }
+  }
+  return trimmed;
+}
+
+document.getElementById("addForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const hostInput = document.getElementById("addHost");
+  const scopeInput = document.getElementById("addScope");
+  const actionSelect = document.getElementById("addAction");
+
+  const host = parseHost(hostInput.value);
+  if (!host) {
+    hostInput.focus();
+    return;
+  }
+
+  const rules = await getRules();
+  rules.push({
+    host,
+    scope: normalizeScope(scopeInput.value),
+    action: actionSelect.value,
+    createdAt: Date.now(),
+  });
+  await setRules(rules);
+
+  hostInput.value = "";
+  scopeInput.value = "";
+  actionSelect.value = "allow";
+  render();
+});
+
 renderHardRules();
 render();

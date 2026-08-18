@@ -6,12 +6,23 @@ const CLOUDFLARE_TITLE = "Just a moment...";
 // /auth/, ?oauth=, /signin, or /sign-in path or param does.
 const AUTH_KEYWORD_RE = /\b(login|oauth|auth|signin|sign-in)\b/i;
 
+// Whole hosts that are always an auth flow, every path, even when the URL
+// itself doesn't hit AUTH_KEYWORD_RE - e.g. Apple ID's "IDMSWebAuth" has
+// "auth" glued onto "Web", so \bauth\b never fires on it.
+const AUTH_DOMAIN_HOSTS = ["idmsa.apple.com"];
+
 function isCloudflareInterstitial(item) {
   return item.title === CLOUDFLARE_TITLE && item.url.includes("__cf_chl");
 }
 
-function isAuthKeywordUrl(url) {
-  return AUTH_KEYWORD_RE.test(url);
+// This extension's own pages (popup, View Rules) should never show up in
+// browsing history at all - not even long enough to ask about them.
+function isOwnExtensionUrl(url) {
+  return url.startsWith(`chrome-extension://${chrome.runtime.id}/`);
+}
+
+function isAuthKeywordUrl(host, url) {
+  return AUTH_DOMAIN_HOSTS.includes(host) || AUTH_KEYWORD_RE.test(url);
 }
 
 // Search-result pages only, not the bare homepage - so duckduckgo.com/ or
@@ -336,11 +347,31 @@ chrome.notifications.onClosed.addListener(async (notifId) => {
   }
 });
 
+// Clicking the notification body (not a button) jumps straight to View
+// Rules - Chrome only supports 2 notification buttons, so this is the
+// shortcut to the rules page instead of a third button. Same as closing it
+// manually: the pending entry itself is untouched, still there to resolve
+// later via the popup.
+chrome.notifications.onClicked.addListener(async (notifId) => {
+  const map = await getNotificationMap();
+  if (!(notifId in map)) return;
+  chrome.tabs.create({ url: chrome.runtime.getURL("options.html") });
+  delete map[notifId];
+  await setNotificationMap(map);
+  chrome.notifications.clear(notifId);
+});
+
 chrome.history.onVisited.addListener(async (item) => {
   const url = item.url;
-  // Only ever act on real web pages - chrome-extension:// (including this
-  // extension's own options/popup pages), chrome://, file://, etc. should
-  // never enter discovery or the hard rules.
+
+  if (isOwnExtensionUrl(url)) {
+    chrome.history.deleteUrl({ url });
+    return;
+  }
+
+  // Only ever act on real web pages - chrome-extension:// (other
+  // extensions), chrome://, file://, etc. should never enter discovery or
+  // the hard rules.
   if (!/^https?:\/\//i.test(url)) return;
   const host = getHost(url);
   if (!host) return;
@@ -353,7 +384,7 @@ chrome.history.onVisited.addListener(async (item) => {
     return;
   }
 
-  if (isAuthKeywordUrl(url)) {
+  if (isAuthKeywordUrl(host, url)) {
     chrome.history.deleteUrl({ url });
     return;
   }

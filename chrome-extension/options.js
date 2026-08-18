@@ -1,5 +1,5 @@
 const HARD_RULES = [
-  { rule: "Authorization / login keywords", matches: 'URLs containing exact matches for the words "auth", "oauth", "login", "signin", or "sign-in" are deleted from the browser history.' },
+  { rule: "Authorization / login keywords", matches: 'URLs containing exact matches for the words "auth", "oauth", "login", "signin", "sign-in", and "idmsa" (Apple) are deleted from the browser history.' },
   { rule: "Bookmarked links", matches: "Any URL that exactly matches a bookmarked URL is deleted from the browser history." },
   { rule: "Browser search results", matches: "URLs for searches on google.com or duckduckgo.com are deleted from the browser history." },
   { rule: "Cloudflare redirection", matches: 'Any page titled exactly "Just a moment..." whose URL also contains __cf_chl (Cloudflare\'s temporary "checking your browser" screen, not the real page underneath it) is deleted from the browser history.' },

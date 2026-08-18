@@ -133,9 +133,10 @@ function extractGoogleDriveId(url) {
   return null;
 }
 
-// Serializes every storage read-modify-write section below so overlapping
-// onVisited invocations (and messages from the popup) can't interleave
-// their get/set calls and silently drop each other's writes.
+// Serializes every storage read-modify-write section below - rules/pending
+// mutations and the notification-id map alike - so overlapping onVisited
+// invocations, notification events, and messages from the popup can't
+// interleave their get/set calls and silently drop each other's writes.
 let storageQueue = Promise.resolve();
 function withStorageLock(fn) {
   const run = storageQueue.then(fn, fn);
@@ -268,8 +269,9 @@ async function updateBadge() {
   chrome.action.setBadgeBackgroundColor({ color: "#d33" });
 }
 
-// Maps a live notification id -> the host it's asking about, so the button
-// click handler knows which pending entry to resolve.
+// Maps a live notification id -> the host it's asking about. Read/written
+// by the button-click, close, and click (View Rules) notification handlers
+// below, always inside withStorageLock.
 async function getNotificationMap() {
   const { notificationMap } = await chrome.storage.local.get({ notificationMap: {} });
   return notificationMap;
@@ -306,45 +308,58 @@ function normalizeScope(scope) {
 // No retroactive deletion, ever: this only records the rule for future
 // visits going forward. Whatever's already in history for this host,
 // including the visit that triggered the prompt, is left untouched.
-async function resolveHost(host, action, scope = null) {
-  return withStorageLock(async () => {
-    const rules = await getRules();
-    rules.push({ host, scope: normalizeScope(scope), action, createdAt: Date.now() });
-    await setRules(rules);
+//
+// "Raw" - assumes the caller already holds the storage lock. Call these
+// directly only from inside another withStorageLock() (see the notification
+// handlers below); everyone else should call resolveHost/dismissPending.
+async function resolveHostRaw(host, action, scope = null) {
+  const rules = await getRules();
+  rules.push({ host, scope: normalizeScope(scope), action, createdAt: Date.now() });
+  await setRules(rules);
 
-    const pending = await getPending();
-    await setPending(pending.filter((p) => p.host !== host));
-    await updateBadge();
-  });
+  const pending = await getPending();
+  await setPending(pending.filter((p) => p.host !== host));
+  await updateBadge();
+}
+
+async function dismissPendingRaw(host) {
+  const pending = await getPending();
+  await setPending(pending.filter((p) => p.host !== host));
+  await updateBadge();
+}
+
+async function resolveHost(host, action, scope = null) {
+  return withStorageLock(() => resolveHostRaw(host, action, scope));
 }
 
 async function dismissPending(host) {
-  return withStorageLock(async () => {
-    const pending = await getPending();
-    await setPending(pending.filter((p) => p.host !== host));
-    await updateBadge();
-  });
+  return withStorageLock(() => dismissPendingRaw(host));
 }
 
 chrome.notifications.onButtonClicked.addListener(async (notifId, buttonIndex) => {
-  const map = await getNotificationMap();
-  const host = map[notifId];
-  if (!host) return;
-  await resolveHost(host, buttonIndex === 0 ? "allow" : "deny");
-  delete map[notifId];
-  await setNotificationMap(map);
-  chrome.notifications.clear(notifId);
+  const resolved = await withStorageLock(async () => {
+    const map = await getNotificationMap();
+    const host = map[notifId];
+    if (!host) return false;
+    await resolveHostRaw(host, buttonIndex === 0 ? "allow" : "deny");
+    delete map[notifId];
+    await setNotificationMap(map);
+    return true;
+  });
+  if (resolved) chrome.notifications.clear(notifId);
 });
 
 // Dismissed without clicking a button (manually closed) -> just drop the
 // map entry, the pending item itself stays in the queue for later review
 // via the popup.
 chrome.notifications.onClosed.addListener(async (notifId) => {
-  const map = await getNotificationMap();
-  if (notifId in map) {
-    delete map[notifId];
-    await setNotificationMap(map);
-  }
+  await withStorageLock(async () => {
+    const map = await getNotificationMap();
+    if (notifId in map) {
+      delete map[notifId];
+      await setNotificationMap(map);
+    }
+  });
 });
 
 // Clicking the notification body (not a button) jumps straight to View
@@ -353,11 +368,15 @@ chrome.notifications.onClosed.addListener(async (notifId) => {
 // manually: the pending entry itself is untouched, still there to resolve
 // later via the popup.
 chrome.notifications.onClicked.addListener(async (notifId) => {
-  const map = await getNotificationMap();
-  if (!(notifId in map)) return;
+  const found = await withStorageLock(async () => {
+    const map = await getNotificationMap();
+    if (!(notifId in map)) return false;
+    delete map[notifId];
+    await setNotificationMap(map);
+    return true;
+  });
+  if (!found) return;
   chrome.tabs.create({ url: chrome.runtime.getURL("options.html") });
-  delete map[notifId];
-  await setNotificationMap(map);
   chrome.notifications.clear(notifId);
 });
 
@@ -464,9 +483,11 @@ chrome.runtime.onInstalled.addListener(updateBadge);
 chrome.runtime.onStartup.addListener(updateBadge);
 
 // popup.js routes its allow/deny/dismiss actions through here instead of
-// writing to storage directly, so every pending/rules mutation - whether
-// triggered by a notification button or the popup - goes through the same
-// storageQueue and can't race with an in-flight onVisited handler.
+// writing to storage directly, and options.js's manual "Add a rule" form
+// reuses the same resolvePending message, so every pending/rules mutation -
+// whether triggered by a notification button, the popup, or a manually
+// typed rule - goes through the same storageQueue and can't race with an
+// in-flight onVisited handler.
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "resolvePending") {
     resolveHost(message.host, message.action, message.scope).then(async () => {

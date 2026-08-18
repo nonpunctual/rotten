@@ -7,27 +7,31 @@ const HARD_RULES = [
   { rule: "Google Docs & Drive", matches: "The first visit to a given Google Doc, Sheet, Slide, or Drive file/folder is kept; any later visits to the same item (even if the URLs have different tracking parameters) are deleted from the browser history." },
   { rule: "Google service domains", matches: 'Every URL on "accounts.google.com", "calendar.google.com", "chat.google.com", "mail.google.com", or "meet.google.com" is deleted from the browser history. URLs containing "drive.google.com" are treated differently - only the bare top-level homepage is deleted. Real links on "drive.google.com" are kept.' },
   { rule: "LinkedIn", matches: "Profile page visits and post links (including company posts) are kept. All other URLs (feed, search, network browsing, and login pages) are deleted from the browser history." },
-  { rule: "YouTube", matches: "The first visit to a given YouTube video is kept. Later visits to the same video (even if the URLs have different tracking parameters) is deleted from the browser history." },
+  { rule: "YouTube", matches: "The first visit to a given YouTube video is kept. Later visits to the same video (even if the URLs have different tracking parameters) are deleted from the browser history." },
 ];
 
-function renderHardRules() {
-  const rows = document.getElementById("hardRows");
-  rows.innerHTML = HARD_RULES.map(
-    (r) => `<tr><td>${esc(r.rule)}</td><td>${esc(r.matches)}</td></tr>`
-  ).join("");
+// The rules exactly as last rendered. Remove buttons carry an index into
+// this snapshot, and the rule object it points at - not the index - is what
+// gets sent to background.js, so a rules list that changed underneath us
+// (a notification button, another tab) can't make a Remove hit the wrong row.
+let renderedRules = [];
+
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s ?? "";
+  return d.innerHTML;
 }
 
 async function getRules() {
   const { rules } = await chrome.storage.local.get({ rules: [] });
   return rules;
 }
-async function setRules(rules) {
-  await chrome.storage.local.set({ rules });
-}
-function esc(s) {
-  const d = document.createElement("div");
-  d.textContent = s ?? "";
-  return d.innerHTML;
+
+function renderHardRules() {
+  const rows = document.getElementById("hardRows");
+  rows.innerHTML = HARD_RULES.map(
+    (r) => `<tr><td>${esc(r.rule)}</td><td>${esc(r.matches)}</td></tr>`
+  ).join("");
 }
 
 function renderRuleRows(el, rules, indices, emptyLabel) {
@@ -48,8 +52,8 @@ function renderRuleRows(el, rules, indices, emptyLabel) {
     .join("");
 }
 
-async function render() {
-  const rules = await getRules();
+function renderRules(rules) {
+  renderedRules = rules;
   const allowIndices = [];
   const denyIndices = [];
   rules.forEach((r, i) => (r.action === "allow" ? allowIndices : denyIndices).push(i));
@@ -57,20 +61,28 @@ async function render() {
   renderRuleRows(document.getElementById("rowsDeny"), rules, denyIndices, "No deny rules learned yet.");
 }
 
-async function removeRule(i) {
-  const rules = await getRules();
-  rules.splice(i, 1);
-  await setRules(rules);
-  render();
+async function render() {
+  renderRules(await getRules());
 }
-document.getElementById("rowsAllow").addEventListener("click", (e) => {
-  if (e.target.tagName !== "BUTTON") return;
-  removeRule(Number(e.target.dataset.i));
-});
-document.getElementById("rowsDeny").addEventListener("click", (e) => {
-  if (e.target.tagName !== "BUTTON") return;
-  removeRule(Number(e.target.dataset.i));
-});
+
+// Removal goes through background.js for the same reason the add form does:
+// it's a read-modify-write of "rules" and has to happen under the storage
+// lock, not as an unlocked write from this page.
+async function removeRule(rule) {
+  const response = await chrome.runtime.sendMessage({ type: "removeRule", rule });
+  renderRules(response.rules);
+}
+
+function onRulesTableClick(e) {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const rule = renderedRules[Number(btn.dataset.i)];
+  if (rule) removeRule(rule);
+}
+
+for (const id of ["rowsAllow", "rowsDeny"]) {
+  document.getElementById(id).addEventListener("click", onRulesTableClick);
+}
 
 // Lets a full URL be pasted into the host field instead of requiring the
 // bare hostname.

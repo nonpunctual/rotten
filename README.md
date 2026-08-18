@@ -7,13 +7,13 @@
 Rotten is a Google Chrome extension that keeps your browsing history from becoming rotten.
 
 - It deletes noisy / duplicate site visits as they're written (auth flows, search results, tracking-param duplicates, Cloudflare interstitials, and more).
-- It also learns. It prompts the user with standard Desktop Notifications to allow or deny anything from a site it hasn't seen before with an editable scope: rules can be edited & applied to a path prefix instead of whole domain.
+- It also learns. It prompts the user with standard Desktop Notifications to allow or deny anything from a site it hasn't seen before with an editable scope: a rule can cover the whole domain, or be narrowed to any text matched anywhere in the URL (a path, a query parameter value, and so on).
 
 Built-in rules:
 
 | Rule | Matches |
 | --- | --- |
-| Authorization / login keywords | URLs containing exact matches for the words "auth", "oauth", "login", "signin", or "sign-in" are deleted from the browser history. |
+| Authorization / login keywords | URLs containing exact matches for the words "auth", "oauth", "login", "signin", "sign-in", and "idmsa" (Apple) are deleted from the browser history. |
 | Bookmarked links | Any URL that exactly matches a bookmarked URL is deleted from the browser history. |
 | Browser search results | URLs for searches on google.com or duckduckgo.com are deleted from the browser history. |
 | Cloudflare redirection | Any page titled exactly "Just a moment..." whose URL also contains `__cf_chl` (Cloudflare's temporary "checking your browser" screen, not the real page underneath it) is deleted from the browser history. |
@@ -21,7 +21,7 @@ Built-in rules:
 | Google Docs & Drive | The first visit to a given Google Doc, Sheet, Slide, or Drive file/folder is kept; any later visits to the same item (even if the URLs have different tracking parameters) are deleted from the browser history. |
 | Google service domains | Every URL on "accounts.google.com", "calendar.google.com", "chat.google.com", "mail.google.com", or "meet.google.com" is deleted from the browser history. URLs containing "drive.google.com" are treated differently - only the bare top-level homepage is deleted. Real links on "drive.google.com" are kept. |
 | LinkedIn | Profile page visits and post links (including company posts) are kept. All other URLs (feed, search, network browsing, and login pages) are deleted from the browser history. |
-| YouTube | The first visit to a given YouTube video is kept. Later visits to the same video (even if the URLs have different tracking parameters) is deleted from the browser history. |
+| YouTube | The first visit to a given YouTube video is kept. Later visits to the same video (even if the URLs have different tracking parameters) are deleted from the browser history. |
 
 Rotten also includes `archive_chrome_history.sh`: a standalone script that archives the Google Chrome history into a day-partitioned SQLite database separate from the history database in the app which allows your browsing history to survive past Chrome's 90-day retention window.
 

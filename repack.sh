@@ -15,9 +15,9 @@ if [ $# -ne 1 ] || [ -z "$1" ]; then
   echo "usage: $(basename "$0") <version>" >&2
   exit 1
 fi
-NEW_VERSION="$1"
-if [[ ! "$NEW_VERSION" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]]; then
-  echo "error: version '$NEW_VERSION' doesn't look like a version string (e.g. 0.2.4)" >&2
+VERSION="$1"
+if [[ ! "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]]; then
+  echo "error: version '$VERSION' doesn't look like a version string (e.g. 0.2.4)" >&2
   exit 1
 fi
 
@@ -53,8 +53,7 @@ if ! grep -qE '"version": *"[^"]+"' "$MANIFEST"; then
   echo "error: couldn't find a \"version\" field in $MANIFEST" >&2
   exit 1
 fi
-sed -i '' -E 's/"version": *"[^"]+"/"version": "'"$NEW_VERSION"'"/' "$MANIFEST"
-VERSION="$NEW_VERSION"
+sed -i '' -E 's/"version": *"[^"]+"/"version": "'"$VERSION"'"/' "$MANIFEST"
 
 COMPUTED_ID=$(openssl rsa -in "$KEY" -pubout -outform DER 2>/dev/null \
   | shasum -a 256 | cut -d' ' -f1 | cut -c1-32 | tr '0123456789abcdef' 'abcdefghijklmnop')

@@ -2,21 +2,19 @@
 #
 # Archive the Google Chrome browser history.
 #
-# This script is read-only with respect to Chrome's history. It 
-# does not delete or overwrite the Chrome history database file. 
+# This script does not delete or overwrite the Chrome history database file. 
 #
-# When run, for every Chrome profile, visits are grouped by calendar
-# day and upserted into a separate chrome_history_archive.db file.
-# This creates a stand-alone archive that survives the Google
-# Chrome 90 day browser history retention window.
+# When run, for every Chrome profile, visits are grouped by calendar day and
+# upserted into a separate chrome_history_archive.db file. This creates a 
+# stand-alone archive that survives the Google Chrome 90 day browser history
+# retention window.
 #
-# A day's row is fully overwritten on every script run for as long
-# as that day still has live visits in Chrome's history. This covers
-# running the script multiple times before a day ages out. Once a
-# day has no more live visits (i.e., Chrome has purged it past the
-# 90-day retention window), that day is absent from the SELECT operation
-# and is therefore never touched again - that day's row is frozen
-# permanently.
+# A day's row is fully overwritten on every script run for as long as that day
+# still has live visits in Chrome's history. This covers running the script 
+# multiple times before a day ages out. Once a day has no more live visits (i.e.,
+# Chrome has purged it past the 90-day retention window), that day is absent from
+# the SELECT operation and is therefore never touched again - that day's row is
+# frozen permanently.
 #
 # Usage:
 #   ./archive_chrome_history.sh --dry-run   # preview what would be archived
@@ -29,8 +27,20 @@ ARCHIVE_DB="$SCRIPT_DIR/chrome_history_archive.db"
 DRY_RUN=0
 [ "${1:-}" = "--dry-run" ] && DRY_RUN=1
 
+# Calendar day of a visit, as YYYY-MM-DD. visit_time is microseconds since
+# 1601-01-01; the 11644473600 offset converts it to Unix epoch seconds. Every
+# query below aliases the visits table as "v" so this one expression works
+# everywhere.
+DAY_EXPR="strftime('%Y-%m-%d', v.visit_time / 1000000 - 11644473600, 'unixepoch')"
+
 sql_escape() {
   printf '%s' "$1" | sed "s/'/''/g"
+}
+
+# Days that still have visits in Chrome's live history, i.e. the days this
+# run can still refresh (anything older has aged out and is frozen).
+live_day_count() {
+  sqlite3 "$1" "SELECT COUNT(DISTINCT $DAY_EXPR) FROM visits v;"
 }
 
 table_exists() {
@@ -56,8 +66,8 @@ archive_profile() {
 
   if [ "$DRY_RUN" = "1" ]; then
     local rows days
-    rows="$(sqlite3 "$work_path" "SELECT COUNT(*) FROM (SELECT 1 FROM visits v JOIN urls u ON u.id = v.url GROUP BY strftime('%Y-%m-%d', v.visit_time / 1000000 - 11644473600, 'unixepoch'), u.url);")"
-    days="$(sqlite3 "$work_path" "SELECT COUNT(DISTINCT strftime('%Y-%m-%d', visit_time / 1000000 - 11644473600, 'unixepoch')) FROM visits;")"
+    rows="$(sqlite3 "$work_path" "SELECT COUNT(*) FROM (SELECT 1 FROM visits v JOIN urls u ON u.id = v.url GROUP BY $DAY_EXPR, u.url);")"
+    days="$(live_day_count "$work_path")"
     echo "Would archive $rows url-day row(s) across $days live day(s). (dry run: archive DB unchanged)"
     rm -f "$work_path"
     return
@@ -88,15 +98,15 @@ archive_profile() {
   esc_archive_db="$(sql_escape "$ARCHIVE_DB")"
   archived_before="$(sqlite3 "$ARCHIVE_DB" "SELECT COUNT(*) FROM archived_urls;")"
 
-  # visit_time is microseconds since 1601-01-01; the 11644473600 offset
-  # converts to Unix epoch seconds.
+  # The "WHERE true" is required, not filler: without it SQLite parses the
+  # ON CONFLICT below as part of the join instead of as an upsert clause.
   sqlite3 "$work_path" "
     ATTACH DATABASE '$esc_archive_db' AS archive;
     INSERT INTO archive.archived_urls
       (profile, day, url, title, visit_count, first_visit_time, last_visit_time, last_synced_at)
     SELECT
       '$esc_profile',
-      strftime('%Y-%m-%d', v.visit_time / 1000000 - 11644473600, 'unixepoch'),
+      $DAY_EXPR,
       u.url, u.title, COUNT(*), MIN(v.visit_time), MAX(v.visit_time), '$now'
     FROM visits v JOIN urls u ON u.id = v.url
     WHERE true
@@ -110,7 +120,7 @@ archive_profile() {
     DETACH DATABASE archive;"
 
   archived_after="$(sqlite3 "$ARCHIVE_DB" "SELECT COUNT(*) FROM archived_urls;")"
-  archived_count="$(sqlite3 "$work_path" "SELECT COUNT(DISTINCT strftime('%Y-%m-%d', visit_time / 1000000 - 11644473600, 'unixepoch')) FROM visits;")"
+  archived_count="$(live_day_count "$work_path")"
   echo "Archive DB rows: $archived_before -> $archived_after ($archived_count live day(s) refreshed this run)"
 
   rm -f "$work_path"

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Rotten",
-  "version": "1.3.7",
+  "version": "1.3.8",
   "description": "Keep your Google Chrome history clean. See View Rules for built-in, allow & deny rule lists.\n\n",
   "permissions": ["history", "storage", "bookmarks", "notifications"],
   "background": {

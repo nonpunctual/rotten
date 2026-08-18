@@ -72,15 +72,6 @@ document.getElementById("rowsDeny").addEventListener("click", (e) => {
   removeRule(Number(e.target.dataset.i));
 });
 
-// Same "no leading-slash normalization, blank -> whole domain" behavior as
-// background.js's normalizeScope, since a rule added here has to match the
-// same way one added via the popup would.
-function normalizeScope(scope) {
-  if (!scope) return null;
-  const trimmed = scope.trim();
-  return trimmed || null;
-}
-
 // Lets a full URL be pasted into the host field instead of requiring the
 // bare hostname.
 function parseHost(input) {
@@ -108,14 +99,16 @@ document.getElementById("addForm").addEventListener("submit", async (e) => {
     return;
   }
 
-  const rules = await getRules();
-  rules.push({
+  // Same message popup.js sends to resolve a live pending entry - besides
+  // adding the rule, it also clears out any pending entry for this host
+  // (harmless no-op if there isn't one) and does both under background.js's
+  // storage lock, instead of this page writing to "rules" unlocked.
+  await chrome.runtime.sendMessage({
+    type: "resolvePending",
     host,
-    scope: normalizeScope(scopeInput.value),
     action: actionSelect.value,
-    createdAt: Date.now(),
+    scope: scopeInput.value,
   });
-  await setRules(rules);
 
   hostInput.value = "";
   scopeInput.value = "";

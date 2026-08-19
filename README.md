@@ -7,13 +7,13 @@
 Rotten is a Google Chrome extension that keeps your browsing history from becoming rotten.
 
 - It deletes noisy / duplicate site visits as they're written (auth flows, search results, tracking-param duplicates, Cloudflare interstitials, and more).
-- It also learns. It prompts the user with standard Desktop Notifications to allow or deny anything from a site it hasn't seen before with an editable scope: a rule can cover the whole domain, or be narrowed to any text matched anywhere in the URL (a path, a query parameter value, and so on).
+- It also learns. It prompts the user with standard Desktop Notifications to allow or deny anything from a site it hasn't seen before with an editable scope: a rule can cover the whole domain, or be narrowed to any text matched anywhere in the URL (a path, a query parameter value, and so on). If a domain (or a broader scope on it) already has a deny rule, add an allow rule with a more specific scope (a path, a query parameter, any matched text). More specific scope wins, regardless of existing rules.
 
 Built-in rules:
 
 | Rule | Matches |
 | --- | --- |
-| Authorization / login keywords | URLs containing exact matches for the words "auth", "oauth", "login", "signin", "sign-in", and "idmsa" (Apple) are deleted from the browser history. |
+| Authorization / login keywords | URLs containing exact matches for the words "auth", "idmsa" (Apple), "login", "oauth", "signin", "sign-in", and "sso" are deleted from the browser history. |
 | Bookmarked links | Any URL that exactly matches a bookmarked URL is deleted from the browser history. |
 | Browser search results | URLs for searches on google.com or duckduckgo.com are deleted from the browser history. |
 | Cloudflare redirection | Any page titled exactly "Just a moment..." whose URL also contains `__cf_chl` (Cloudflare's temporary "checking your browser" screen, not the real page underneath it) is deleted from the browser history. |

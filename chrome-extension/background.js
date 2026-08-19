@@ -3,8 +3,16 @@ const CLOUDFLARE_TITLE = "Just a moment...";
 
 // Exact-token match (word boundaries), not a loose substring - so
 // "authentication"/"authuser" don't trigger on "auth", but a real /login,
-// /auth/, ?oauth=, /signin, /sign-in, or /sso path or param does.
-const AUTH_KEYWORD_RE = /\b(login|oauth|auth|signin|sign-in|sso)\b/i;
+// /auth/, ?oauth=, /oauth2/, /authorize, /signin, /sign-in, /sign-on, or
+// /sso path or param does. oauth2? and authorize are separate alternatives
+// (not folded into auth/oauth) because a bare \b won't fire when auth/oauth
+// is glued to a trailing digit or suffix, e.g. "oauth2" or "authorize".
+// authorize has an extra (?!\.\w) guard - without it, "authorize" bounded by
+// word boundaries also matches inside a hostname like authorize.net (the
+// payment gateway), which is not an auth flow; real path/query hits like
+// /authorize?... or /authorize/ or a trailing /authorize are unaffected
+// since they're never followed by ".<letters>".
+const AUTH_KEYWORD_RE = /\b(login|oauth2?|authorize(?!\.\w)|auth|signin|sign-in|sign-on|sso)\b/i;
 
 // Whole hosts that are always an auth flow, every path, even when the URL
 // itself doesn't hit AUTH_KEYWORD_RE - e.g. Apple ID's "IDMSWebAuth" has
@@ -45,7 +53,7 @@ function isOwnExtensionUrl(url) {
 }
 
 function isAuthKeywordUrl(host, url) {
-  return AUTH_DOMAIN_HOSTS.includes(host) || AUTH_KEYWORD_RE.test(url);
+  return AUTH_DOMAIN_HOSTS.includes(host) || AUTH_KEYWORD_RE.test(decodeLoose(url));
 }
 
 // Search-result pages only, not the bare homepage - so duckduckgo.com/ or

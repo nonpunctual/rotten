@@ -6,8 +6,13 @@
 
 Rotten is a Google Chrome extension that keeps your browsing history from becoming rotten.
 
-- It deletes noisy / duplicate site visits as they're written (auth flows, search results, tracking-param duplicates, Cloudflare interstitials, and more).
-- It also learns. It prompts the user with standard Desktop Notifications to allow or deny anything from a site it hasn't seen before with an editable scope: a rule can cover the whole domain, or be narrowed to any text matched anywhere in the URL (a path, a query parameter value, and so on). If a domain (or a broader scope on it) already has a deny rule, add an allow rule with a more specific scope (a path, a query parameter, any matched text). More specific scope wins, regardless of existing rules.
+- Rotten deletes noisy / duplicate site visits as they're written (auth flows, search results, tracking-param duplicates, Cloudflare interstitials, and more).
+- It also learns:
+  - Rotten prompts the user with standard Desktop Notifications to allow or deny anything from a site it hasn't seen before.
+  - URL scope is editable: a rule can cover the whole domain, or be narrowed to any text matched anywhere in the URL (a path, a query parameter value, and so on).
+  - If a domain (or a broader scope on it) already has a deny rule, add an allow rule with a more specific scope (a path, a query parameter, any matched text). 
+    - More specific scope wins, regardless of existing rules.
+- Allow or deny rules can also be added manually.
 
 Built-in rules:
 

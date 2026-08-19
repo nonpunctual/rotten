@@ -3,8 +3,8 @@ const CLOUDFLARE_TITLE = "Just a moment...";
 
 // Exact-token match (word boundaries), not a loose substring - so
 // "authentication"/"authuser" don't trigger on "auth", but a real /login,
-// /auth/, ?oauth=, /signin, or /sign-in path or param does.
-const AUTH_KEYWORD_RE = /\b(login|oauth|auth|signin|sign-in)\b/i;
+// /auth/, ?oauth=, /signin, /sign-in, or /sso path or param does.
+const AUTH_KEYWORD_RE = /\b(login|oauth|auth|signin|sign-in|sso)\b/i;
 
 // Whole hosts that are always an auth flow, every path, even when the URL
 // itself doesn't hit AUTH_KEYWORD_RE - e.g. Apple ID's "IDMSWebAuth" has

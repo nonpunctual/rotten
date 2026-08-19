@@ -31,7 +31,8 @@
   <h2>Add a rule</h2>
   <br><div class="subtitle">HOST = https://www.example.com</div><br>
   <div class="subtitle">SCOPE = optional text matched anywhere in the URL (not just the path).</div>
-  <div class="subtitle">Include slashes in the scope for exact matching (e.g., HOST = https://www.example.com, SCOPE = /somepath/).</div><br>
+  <div class="subtitle">Include slashes in the scope for exact matching (e.g., HOST = https://www.example.com, SCOPE = /somepath/).</div>
+  <div class="subtitle">If a domain (or a broader scope on it) already has a deny rule, add an allow rule with a more specific scope (a path, a query parameter, any matched text). More specific scope wins, regardless of existing rules.</div><br>
   <form id="addForm">
     <div class="field">
       <label for="addHost">Host</label>

@@ -63,6 +63,12 @@
     <thead><tr><th>Host</th><th>Scope</th><th></th></tr></thead>
     <tbody id="rowsDeny"></tbody>
   </table>
+
+  <h1>Log file</h1>
+  <div class="subtitle">Mirrors every deletion as JSON Lines to a file on disk, but only while this page stays open. Nothing is written until you pick a file.</div>
+  <div id="logFileStatus" class="subtitle">Not logging.</div>
+  <button id="chooseLogFile">Choose log file…</button>
+
   <script src="options.js"></script>
 </body>
 </html>

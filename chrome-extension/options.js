@@ -130,3 +130,141 @@ document.getElementById("addForm").addEventListener("submit", async (e) => {
 
 renderHardRules();
 render();
+
+// Log file: the file handle can't go in chrome.storage (not structured-
+// cloneable there), so it's kept in this page's own IndexedDB - the
+// standard persistence mechanism for File System Access handles. Only
+// this page (not background.js, which has no filesystem access at all)
+// ever touches the file; background.js just queues entries for it to drain.
+const LOG_DB_NAME = "rottenLogFile";
+const LOG_DB_STORE = "handles";
+const LOG_DB_KEY = "logFile";
+
+function openLogDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(LOG_DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(LOG_DB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function getSavedLogHandle() {
+  const db = await openLogDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(LOG_DB_STORE, "readonly");
+    const req = tx.objectStore(LOG_DB_STORE).get(LOG_DB_KEY);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveLogHandle(handle) {
+  const db = await openLogDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(LOG_DB_STORE, "readwrite");
+    tx.objectStore(LOG_DB_STORE).put(handle, LOG_DB_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+let logFileHandle = null;
+
+function setLogStatus(text) {
+  document.getElementById("logFileStatus").textContent = text;
+}
+
+// Permission on a handle isn't permanent - it lapses when the browser
+// restarts, and has to be re-granted from a user gesture (the button below)
+// before the file can be written to again.
+async function hasWritePermission(handle) {
+  return (await handle.queryPermission({ mode: "readwrite" })) === "granted";
+}
+
+// File System Access has no true append mode: a writable stream truncates
+// unless keepExistingData is set, and even then writes start at position 0
+// unless given an explicit offset - so every drain reads the current size
+// first and writes new lines starting there.
+async function appendEntriesToFile(handle, entries) {
+  if (!entries.length) return;
+  const file = await handle.getFile();
+  const writable = await handle.createWritable({ keepExistingData: true });
+  const text = entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
+  await writable.write({ type: "write", position: file.size, data: text });
+  await writable.close();
+}
+
+// navigator.locks (not a local promise chain) because the lock has to hold
+// across tabs, not just within this page: two options.html tabs can restore
+// the same file handle from IndexedDB and both try to drain at once. Web
+// Locks serialize same-named requests across every document of this
+// extension's origin, so only one drain (peek -> write -> ack) runs at a
+// time regardless of how many tabs are open.
+async function drainLogQueue() {
+  if (!logFileHandle) return;
+  if (!(await hasWritePermission(logFileHandle))) return;
+  await navigator.locks.request("rotten-log-file-write", async () => {
+    const { entries } = await chrome.runtime.sendMessage({ type: "peekLogQueue" });
+    if (!entries.length) return;
+    // Only acknowledged (removed from background's queue) after the write
+    // to disk succeeds - if appendEntriesToFile throws, the entries stay
+    // queued and the next drain retries them instead of losing them.
+    await appendEntriesToFile(logFileHandle, entries);
+    await chrome.runtime.sendMessage({ type: "ackLogQueue", count: entries.length });
+  });
+}
+
+async function connectLogHandle(handle) {
+  logFileHandle = handle;
+  setLogStatus(`Logging to ${handle.name}`);
+  await drainLogQueue();
+}
+
+document.getElementById("chooseLogFile").addEventListener("click", async () => {
+  try {
+    // Reconnecting an already-picked file (permission lapsed, e.g. after a
+    // browser restart) re-requests permission on the same handle instead of
+    // making the user pick a file all over again.
+    if (logFileHandle) {
+      const permission = await logFileHandle.requestPermission({ mode: "readwrite" });
+      if (permission === "granted") {
+        await connectLogHandle(logFileHandle);
+        return;
+      }
+    }
+    const handle = await window.showSaveFilePicker({
+      suggestedName: "rotten-activity.log",
+      types: [{ description: "JSON Lines log", accept: { "application/octet-stream": [".log", ".jsonl"] } }],
+    });
+    await saveLogHandle(handle);
+    await connectLogHandle(handle);
+  } catch (e) {
+    if (e.name !== "AbortError") console.error(e);
+  }
+});
+
+async function initLogFile() {
+  const saved = await getSavedLogHandle();
+  if (!saved) {
+    setLogStatus("Not logging.");
+    return;
+  }
+  if (await hasWritePermission(saved)) {
+    await connectLogHandle(saved);
+    return;
+  }
+  logFileHandle = saved;
+  setLogStatus(`Not logging — click "Choose log file…" to reconnect ${saved.name}`);
+}
+
+// Live updates while this page is open: every new deletion queued by
+// background.js triggers a drain immediately, so a screen recording shows
+// entries landing in the file in real time. Guarded on a non-empty newValue
+// so ackLogQueue's own queue-clearing write doesn't trigger a redundant
+// drain of its own.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.logQueue?.newValue?.length) drainLogQueue();
+});
+
+initLogFile();

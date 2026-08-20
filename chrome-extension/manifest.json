@@ -1,8 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Rotten",
-  "version": "1.3.10",
+  "version": "1.3.11",
   "description": "Keep your Google Chrome history clean. See View Rules for built-in, allow & deny rule lists.\n\n",
+  "author": "nonpunctual",
+  "homepage_url": "https://github.com/nonpunctual/rotten",
   "permissions": ["history", "storage", "bookmarks", "notifications"],
   "background": {
     "service_worker": "background.js"

@@ -3,3 +3,4 @@ chrome_history_archive.db
 rotten.pem
 build-pkg.sh
 .DS_Store
+webstore-assets/

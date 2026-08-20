@@ -98,13 +98,13 @@ function isLinkedInNoise(host, pathname) {
 // onVisited - are cheap and synchronous, so they run before the async
 // bookmarks.search call and skip that I/O for most noisy visits.
 const HARD_DELETE_RULES = [
-  ({ item }) => isCloudflareInterstitial(item),
-  ({ host, url }) => isAuthKeywordUrl(host, url),
-  ({ url }) => isSearchResultUrl(url),
-  ({ host }) => isWholeDomainNoise(host),
-  ({ host, pathname }) => isBareHomepageNoise(host, pathname),
-  ({ host, pathname }) => isGithubNoise(host, pathname),
-  ({ host, pathname }) => isLinkedInNoise(host, pathname),
+  { name: "Cloudflare interstitial", test: ({ item }) => isCloudflareInterstitial(item) },
+  { name: "Auth/login keyword", test: ({ host, url }) => isAuthKeywordUrl(host, url) },
+  { name: "Search results", test: ({ url }) => isSearchResultUrl(url) },
+  { name: "Google service domain", test: ({ host }) => isWholeDomainNoise(host) },
+  { name: "Drive bare homepage", test: ({ host, pathname }) => isBareHomepageNoise(host, pathname) },
+  { name: "GitHub noise page", test: ({ host, pathname }) => isGithubNoise(host, pathname) },
+  { name: "LinkedIn noise page", test: ({ host, pathname }) => isLinkedInNoise(host, pathname) },
 ];
 
 function parseUrl(url) {
@@ -171,10 +171,11 @@ function extractGoogleDriveId(parsed) {
 
 // One bucket per id namespace, checked in order - a URL can only ever match
 // one of them, since each extractor is gated on its own hostname.
+// "label" is the human wording used in the log reason for a duplicate.
 const CANONICAL_BUCKETS = [
-  { name: "youtube", extractId: extractYouTubeVideoId },
-  { name: "googleDocs", extractId: extractGoogleDocId },
-  { name: "googleDrive", extractId: extractGoogleDriveId },
+  { name: "youtube", label: "YouTube video", extractId: extractYouTubeVideoId },
+  { name: "googleDocs", label: "Google Doc/Sheet/Slide", extractId: extractGoogleDocId },
+  { name: "googleDrive", label: "Google Drive file/folder", extractId: extractGoogleDriveId },
 ];
 
 // Serializes every storage read-modify-write section below - rules/pending
@@ -242,18 +243,52 @@ async function setNotificationMap(map) {
   await writeStore("notificationMap", map);
 }
 
+// Transport buffer for the options page's on-disk log file: background.js
+// can't write to the filesystem itself (service workers have no File System
+// Access), so every deletion is queued here and options.js drains it into
+// the file whenever that page is open. Capped so an unbounded queue can't
+// build up if the log file page is never opened.
+const LOG_QUEUE_CAP = 2000;
+
+async function getLogQueue() {
+  return readStore("logQueue", []);
+}
+
+async function setLogQueue(queue) {
+  await writeStore("logQueue", queue);
+}
+
+// Every history deletion goes through one of these two, so a deletion can
+// never be made without also recording why it happened.
+//
+// "Raw" - assumes the caller already holds the storage lock, same
+// convention as resolveHostRaw etc. above.
+async function deleteAndLogRaw(url, title, reason) {
+  chrome.history.deleteUrl({ url });
+  const queue = await getLogQueue();
+  queue.push({ url, title: title || "", reason, deletedAt: Date.now() });
+  if (queue.length > LOG_QUEUE_CAP) {
+    queue.splice(0, queue.length - LOG_QUEUE_CAP);
+  }
+  await setLogQueue(queue);
+}
+
+async function deleteAndLog(url, title, reason) {
+  return withStorageLock(() => deleteAndLogRaw(url, title, reason));
+}
+
 // Returns true if this visit was a duplicate and got deleted; false if it's
 // the first-seen instance for its canonical id (kept) or doesn't match any
 // of the bucket id patterns at all.
-async function handleCanonicalDuplicate(url, parsed) {
-  for (const { name, extractId } of CANONICAL_BUCKETS) {
+async function handleCanonicalDuplicate(url, title, parsed) {
+  for (const { name, label, extractId } of CANONICAL_BUCKETS) {
     const id = extractId(parsed);
     if (!id) continue;
 
     const canonical = await getCanonicalStore();
     const bucket = canonical[name];
     if (bucket[id]) {
-      chrome.history.deleteUrl({ url });
+      await deleteAndLogRaw(url, title, `Duplicate visit (already seen this ${label})`);
       return true;
     }
     bucket[id] = url;
@@ -418,7 +453,7 @@ chrome.history.onVisited.addListener(async (item) => {
   const url = item.url;
 
   if (isOwnExtensionUrl(url)) {
-    chrome.history.deleteUrl({ url });
+    await deleteAndLog(url, item.title, "Rotten's own page");
     return;
   }
 
@@ -433,13 +468,18 @@ chrome.history.onVisited.addListener(async (item) => {
   const pathname = parsed.pathname;
 
   const visit = { item, url, host, pathname };
-  if (HARD_DELETE_RULES.some((isNoise) => isNoise(visit)) || (await isBookmarked(url))) {
-    chrome.history.deleteUrl({ url });
+  const hardRule = HARD_DELETE_RULES.find((rule) => rule.test(visit));
+  if (hardRule) {
+    await deleteAndLog(url, item.title, hardRule.name);
+    return;
+  }
+  if (await isBookmarked(url)) {
+    await deleteAndLog(url, item.title, "Bookmarked link");
     return;
   }
 
   await withStorageLock(async () => {
-    if (await handleCanonicalDuplicate(url, parsed)) {
+    if (await handleCanonicalDuplicate(url, item.title, parsed)) {
       return;
     }
 
@@ -447,7 +487,8 @@ chrome.history.onVisited.addListener(async (item) => {
     const rule = matchRule(rules, host, decodeLoose(url));
     if (rule) {
       if (rule.action === "deny") {
-        chrome.history.deleteUrl({ url });
+        const scope = rule.scope ? ` / ${rule.scope}` : "";
+        await deleteAndLogRaw(url, item.title, `Learned rule: deny ${rule.host}${scope}`);
       }
       return; // action === "allow" -> leave it alone
     }
@@ -499,6 +540,23 @@ const MESSAGE_HANDLERS = {
   async removeRule(message) {
     await removeRule(message.rule);
     return { rules: await getRules() };
+  },
+  // Read-only: hands back the queue without clearing it. Entries only leave
+  // the queue via ackLogQueue, once the options page has actually written
+  // them to disk - otherwise a failed/interrupted write would lose them from
+  // both the queue and the file.
+  async peekLogQueue() {
+    return { entries: await getLogQueue() };
+  },
+  // Removes the first `count` entries (the ones the caller just confirmed it
+  // wrote) under the lock, so an in-flight onVisited deletion appending to
+  // the queue mid-write can't have its entry discarded by this trim.
+  async ackLogQueue(message) {
+    return withStorageLock(async () => {
+      const queue = await getLogQueue();
+      await setLogQueue(queue.slice(message.count));
+      return {};
+    });
   },
 };
 

@@ -17,8 +17,8 @@
 # frozen permanently.
 #
 # Usage:
-#   ./archive_chrome_history.sh --dry-run   # preview what would be archived
-#   ./archive_chrome_history.sh             # actually archive
+#   ./archive_chrome_history.sh --dry-run   # preview archive
+#   ./archive_chrome_history.sh             # archive
 
 CHROME_BASE_DIR="$HOME/Library/Application Support/Google/Chrome"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,9 +28,7 @@ DRY_RUN=0
 [ "${1:-}" = "--dry-run" ] && DRY_RUN=1
 
 # Calendar day of a visit, as YYYY-MM-DD. visit_time is microseconds since
-# 1601-01-01; the 11644473600 offset converts it to Unix epoch seconds. Every
-# query below aliases the visits table as "v" so this one expression works
-# everywhere.
+# 1601-01-01; the 11644473600 offset converts it to Unix epoch seconds.
 DAY_EXPR="strftime('%Y-%m-%d', v.visit_time / 1000000 - 11644473600, 'unixepoch')"
 
 sql_escape() {
@@ -38,7 +36,7 @@ sql_escape() {
 }
 
 # Days that still have visits in Chrome's live history, i.e. the days this
-# run can still refresh (anything older has aged out and is frozen).
+# run can still refresh.
 live_day_count() {
   sqlite3 "$1" "SELECT COUNT(DISTINCT $DAY_EXPR) FROM visits v;"
 }
@@ -73,10 +71,9 @@ archive_profile() {
     return
   fi
 
-  # Migrate an old url-keyed archive table out of the way if present, same
-  # as the original culling script did, so this can share its archive DB.
-  if table_exists "$ARCHIVE_DB" archived_urls && \
-     ! sqlite3 "$ARCHIVE_DB" "PRAGMA table_info(archived_urls);" | grep -q '|day|'; then
+  # Migrate an old url-keyed archive table out of the way if present.
+  if table_exists "$ARCHIVE_DB" archived_urls && ! sqlite3 "$ARCHIVE_DB" "PRAGMA table_info(archived_urls);" | grep -q '|day|'
+  then
     sqlite3 "$ARCHIVE_DB" "ALTER TABLE archived_urls RENAME TO archived_urls_v1_legacy;"
     echo "Migrated old url-keyed archive table to archived_urls_v1_legacy (kept, not used by day-based archiving)."
   fi
@@ -98,8 +95,7 @@ archive_profile() {
   esc_archive_db="$(sql_escape "$ARCHIVE_DB")"
   archived_before="$(sqlite3 "$ARCHIVE_DB" "SELECT COUNT(*) FROM archived_urls;")"
 
-  # The "WHERE true" is required, not filler: without it SQLite parses the
-  # ON CONFLICT below as part of the join instead of as an upsert clause.
+  # "WHERE true" is required. SQLite parses the ON CONFLICT below as part of the join instead of as an upsert clause.
   sqlite3 "$work_path" "
     ATTACH DATABASE '$esc_archive_db' AS archive;
     INSERT INTO archive.archived_urls
@@ -128,23 +124,24 @@ archive_profile() {
 
 main() {
   local found=0
-  for entry in "$CHROME_BASE_DIR"/*; do
+  for entry in "$CHROME_BASE_DIR"/*
+  do
     [ -d "$entry" ] || continue
     local name
     name="$(basename "$entry")"
     case "$name" in
-      Default|"Profile "*)
-        if [ -f "$entry/History" ]; then
+      Default | "Profile "*)
+        if [ -f "$entry/History" ]
+        then
           found=1
           archive_profile "$entry/History"
-        fi
-        ;;
+        fi ;;
     esac
   done
 
-  if [ "$found" = "0" ]; then
-    echo "No Chrome profiles found under $CHROME_BASE_DIR"
-    exit 1
+  if [ "$found" = "0" ]
+  then
+    echo "No Chrome profiles found under $CHROME_BASE_DIR"; exit 1
   fi
 }
 

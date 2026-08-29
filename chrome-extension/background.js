@@ -518,6 +518,42 @@ chrome.history.onVisited.addListener(async (item) => {
   });
 });
 
+// onVisited's isBookmarked() check only catches a URL that was already
+// bookmarked at the moment it was visited. Bookmarking right after visiting
+// (the common flow) misses that check - the visit already went to pending
+// and may have fired a "new site" notification. This listener catches that
+// case after the fact: once the bookmark exists, delete the history entry
+// the same way onVisited would have, and clear out any pending/notification
+// state for the host so there's nothing left to manually skip.
+chrome.bookmarks.onCreated.addListener((id, bookmark) => {
+  const url = bookmark.url;
+  if (!url || !/^https?:\/\//i.test(url)) return;
+  const parsed = parseUrl(url);
+  if (!parsed || !parsed.hostname) return;
+  const host = parsed.hostname;
+
+  withStorageLock(async () => {
+    await deleteAndLogRaw(url, bookmark.title, "Bookmarked link (after the fact)");
+
+    const pending = await getPending();
+    if (pending.some((p) => p.host === host)) {
+      await setPending(pending.filter((p) => p.host !== host));
+      await updateBadge();
+    }
+
+    const map = await getNotificationMap();
+    let changed = false;
+    for (const [notifId, mappedHost] of Object.entries(map)) {
+      if (mappedHost === host) {
+        chrome.notifications.clear(notifId);
+        delete map[notifId];
+        changed = true;
+      }
+    }
+    if (changed) await setNotificationMap(map);
+  });
+});
+
 chrome.runtime.onInstalled.addListener(updateBadge);
 chrome.runtime.onStartup.addListener(updateBadge);
 

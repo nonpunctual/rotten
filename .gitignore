@@ -7,3 +7,4 @@ chrome_history_archive.db
 rotten.pem
 build-pkg.sh
 webstore-assets/
+*.pkg

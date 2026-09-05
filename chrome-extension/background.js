@@ -525,14 +525,14 @@ chrome.history.onVisited.addListener(async (item) => {
 // case after the fact: once the bookmark exists, delete the history entry
 // the same way onVisited would have, and clear out any pending/notification
 // state for the host so there's nothing left to manually skip.
-chrome.bookmarks.onCreated.addListener((id, bookmark) => {
+chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
   const url = bookmark.url;
   if (!url || !/^https?:\/\//i.test(url)) return;
   const parsed = parseUrl(url);
   if (!parsed || !parsed.hostname) return;
   const host = parsed.hostname;
 
-  withStorageLock(async () => {
+  return withStorageLock(async () => {
     await deleteAndLogRaw(url, bookmark.title, "Bookmarked link (after the fact)");
 
     const pending = await getPending();

@@ -57,6 +57,10 @@ function renderRules(rules) {
   const allowIndices = [];
   const denyIndices = [];
   rules.forEach((r, i) => (r.action === "allow" ? allowIndices : denyIndices).push(i));
+  const byHostThenScope = (a, b) =>
+    rules[a].host.localeCompare(rules[b].host) || (rules[a].scope || "").localeCompare(rules[b].scope || "");
+  allowIndices.sort(byHostThenScope);
+  denyIndices.sort(byHostThenScope);
   renderRuleRows(document.getElementById("rowsAllow"), rules, allowIndices, "No allow rules learned yet.");
   renderRuleRows(document.getElementById("rowsDeny"), rules, denyIndices, "No deny rules learned yet.");
 }

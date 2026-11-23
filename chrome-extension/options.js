@@ -88,43 +88,28 @@ for (const id of ["rowsAllow", "rowsDeny"]) {
   document.getElementById(id).addEventListener("click", onRulesTableClick);
 }
 
-// Lets a full URL be pasted into the host field instead of requiring the
-// bare hostname.
-function parseHost(input) {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) {
-    try {
-      return new URL(trimmed).hostname;
-    } catch (e) {
-      return null;
-    }
-  }
-  return trimmed;
-}
-
 document.getElementById("addForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const hostInput = document.getElementById("addHost");
   const scopeInput = document.getElementById("addScope");
   const actionSelect = document.getElementById("addAction");
 
-  const host = parseHost(hostInput.value);
-  if (!host) {
-    hostInput.focus();
-    return;
-  }
-
   // Same message popup.js sends to resolve a live pending entry - besides
   // adding the rule, it also clears out any pending entry for this host
   // (harmless no-op if there isn't one) and does both under background.js's
   // storage lock, instead of this page writing to "rules" unlocked.
-  await chrome.runtime.sendMessage({
+  // background.js normalizes the host (bare hostname or full URL) and
+  // answers host: null, saving nothing, if it can't be parsed.
+  const response = await chrome.runtime.sendMessage({
     type: "resolvePending",
-    host,
+    host: hostInput.value,
     action: actionSelect.value,
     scope: scopeInput.value,
   });
+  if (!response.host) {
+    hostInput.focus();
+    return;
+  }
 
   hostInput.value = "";
   scopeInput.value = "";

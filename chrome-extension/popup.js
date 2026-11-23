@@ -9,14 +9,6 @@ function esc(s) {
   return d.innerHTML;
 }
 
-function samplePathname(p) {
-  try {
-    return new URL(p.lastUrl || p.sampleUrl).pathname;
-  } catch (e) {
-    return "";
-  }
-}
-
 function pendingItemHtml(p) {
   return `
     <div class="item" data-host="${esc(p.host)}">
@@ -24,7 +16,7 @@ function pendingItemHtml(p) {
       <div class="sample">${esc(p.sampleTitle || p.sampleUrl)}</div>
       <div class="count">${p.count} visit${p.count === 1 ? "" : "s"} seen</div>
       <div class="scope">
-        <label>Scope: ${esc(p.host)}<input type="text" class="scope-input" value="${esc(samplePathname(p))}" placeholder="(whole domain)"></label>
+        <label>Scope: ${esc(p.host)}<input type="text" class="scope-input" placeholder="(whole domain)"></label>
       </div>
       <div class="actions">
         <button data-action="allow">Allow</button>

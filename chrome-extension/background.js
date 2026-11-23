@@ -287,6 +287,9 @@ async function handleCanonicalDuplicate(url, title, parsed) {
 
     const canonical = await getCanonicalStore();
     const bucket = canonical[name];
+    // A revisit of the kept URL itself is not a duplicate: deleteUrl would
+    // remove every visit to it, including the first one this is keeping.
+    if (bucket[id] === url) return false;
     if (bucket[id]) {
       await deleteAndLogRaw(url, title, `Duplicate visit (already seen this ${label})`);
       return true;
@@ -364,20 +367,59 @@ function normalizeScope(scope) {
   return trimmed || null;
 }
 
+// Accepts a bare hostname or a full URL (with or without a path) and
+// returns the hostname the way onVisited sees it (lowercased, no path, no
+// trailing slash). Returns null if it can't be parsed as a host at all.
+function normalizeHost(input) {
+  const trimmed = (input || "").trim();
+  if (!trimmed) return null;
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  return parseUrl(withScheme)?.hostname || null;
+}
+
 // No retroactive deletion, ever: this only records the rule for future
 // visits going forward. Whatever's already in history for this host,
 // including the visit that triggered the prompt, is left untouched.
+// Returns the normalized host the rule was saved under, or null (nothing
+// saved) if the host couldn't be parsed.
 //
 // "Raw" - assumes the caller already holds the storage lock. Call these
 // directly only from inside another withStorageLock() (see the notification
 // handlers below); everyone else should call the unsuffixed wrappers.
-async function resolveHostRaw(host, action, scope = null) {
+async function resolveHostRaw(rawHost, action, scope = null) {
+  const host = normalizeHost(rawHost);
+  if (!host) return null;
   const rules = await getRules();
   rules.push({ host, scope: normalizeScope(scope), action, createdAt: Date.now() });
   await setRules(rules);
 
   const pending = await getPending();
   await setPending(pending.filter((p) => p.host !== host));
+  await updateBadge();
+  return host;
+}
+
+// Runs on every install/update/startup; safe to repeat. Fixes rule hosts
+// saved before Add a rule normalized its input (e.g. a trailing slash),
+// dropping any that become exact duplicates, and removes a leftover storage
+// key from an old, uncommitted version.
+async function migrateStorageRaw() {
+  const rules = await getRules();
+  const seen = new Set();
+  const cleaned = [];
+  for (const r of rules) {
+    const host = normalizeHost(r.host) || r.host;
+    const key = JSON.stringify([host, r.scope, r.action]);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cleaned.push({ ...r, host });
+  }
+  if (JSON.stringify(cleaned) !== JSON.stringify(rules)) await setRules(cleaned);
+  await chrome.storage.local.remove("ownLinkedInSlug");
+}
+
+async function onLaunch() {
+  await withStorageLock(migrateStorageRaw);
   await updateBadge();
 }
 
@@ -554,8 +596,8 @@ chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
   });
 });
 
-chrome.runtime.onInstalled.addListener(updateBadge);
-chrome.runtime.onStartup.addListener(updateBadge);
+chrome.runtime.onInstalled.addListener(onLaunch);
+chrome.runtime.onStartup.addListener(onLaunch);
 
 // popup.js routes its allow/deny/dismiss actions through here instead of
 // writing to storage directly, and options.js's manual "Add a rule" form and
@@ -566,8 +608,8 @@ chrome.runtime.onStartup.addListener(updateBadge);
 // re-renders from.
 const MESSAGE_HANDLERS = {
   async resolvePending(message) {
-    await resolveHost(message.host, message.action, message.scope);
-    return { pending: await getPending() };
+    const host = await resolveHost(message.host, message.action, message.scope);
+    return { pending: await getPending(), host };
   },
   async dismissPending(message) {
     await dismissPending(message.host);

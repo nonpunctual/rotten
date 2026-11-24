@@ -9,3 +9,6 @@ rotten.pem
 *.pkg
 *.crx
 DESIGN.md
+PLAN.md
+payload/
+.superpowers/

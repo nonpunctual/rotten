@@ -12,7 +12,7 @@
 
 ## How to work this plan
 
-- Five phases, one per session. Each phase ends with the user's review. Commit only after the user approves the phase. Never push, except release-process steps 9 to 11 after the user's go-ahead (Task 17).
+- Six phases, one per session. Each phase ends with the user's review. Commit only after the user approves the phase. Never push, except release-process steps 9 to 11 after the user's go-ahead (Task 17).
 - No subagents. A new session reads DESIGN.md, this plan, and `git log`, then continues at the first unchecked step.
 - Steps marked **(user)** are done by the user in Chrome. Claude gives the exact clicks and the expected result, then waits.
 - `jsc` = `/System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers/jsc`. Run all tests from the project root: `$jsc -m tests/run.js`. Exit 0 = all pass; any failure throws (exit 3).
@@ -319,6 +319,22 @@ eq(hostSummary(groupDuplicates([
 - [x] Step 6: Release: release-process steps 7 to 11 for `3.0.0`, after the user's go-ahead. Before step 9, the one-time force push over the 1.x history on GitHub, as its own step with the user's explicit go-ahead.
 
 **Phase 5 review (user), then commit.**
+
+## Phase 6: UI and README
+
+### Task 18: UI improvements
+
+- [ ] Step 1 (user): list the improvements. Known from reviews, the user decides which: Duplicates host buttons have no keyboard focus ring; Delete duplicates isn't shown disabled during a run; after the last host is deleted, the empty table shows its header and no "No duplicates." line; the Deleted page stays on "Loading..." if the log can't be read; the first-run page can't be reopened (only `onInstalled` opens it).
+- [ ] Step 2: Implement; `jsc` tests for any logic change. Check each in the lab profile (user).
+
+### Task 19: README
+
+GitHub `main` has no README (`1.x` has the 1.x one). Written new from DESIGN.md and the code, not from the 1.x README (`.claude/rules/old-repo.md`).
+
+- [ ] Step 1: `README.md`: what Rotten deletes (Duplicates keeps one entry per page; rules and bookmarks delete every entry), built-in vs. personal rules, install (unpacked; `.pkg` and configuration profile), first run, each page, the Deleted log.
+- [ ] Step 2: Rules section: rule syntax (DESIGN Rules) and how pasting works (one rule per line; what happens to invalid, repeated, and already-saved lines; preview and confirm), checked against `lib/rules.js` and `rules.js`.
+- [ ] Step 3 (user): screenshots of the popup, Duplicates, Rules, Deleted, and first-run pages, after Task 18, in the lab profile with synthetic history (no personal data in the repo). Stored in `docs/` (Claude's call).
+- [ ] Step 4: User review, commit. Push to GitHub only on the user's go-ahead.
 
 ## Lab results
 

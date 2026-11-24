@@ -2,6 +2,7 @@
     "manifest_version": 3,
     "name": "Rotten",
     "version": "3.0.0",
+    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqtxn7/HMwgidENI7P3NPp1vV3btgFIdinbRA3tuYzjVvQyF0usIWydtUZtIpk3zdBMxcK9tr9FIdkmuGvFL7cxLv2WuhVt58m8qMhe9ksxivjmI0JIZ25auS27dNZuPH4DnUjax1SGFGe6L9Blh9SvU5+dZFg37Cg4BProuOhMzYPy0M6fbdZaImQFkAZ3TcR7RD9Q/LSCuKqF2l8AHN9gxxszQGIGxkN7oc0U+OapgA+j98GSYht31fqNP8Ef0go6fRwmFc6MZ/R2SS7vSNmNvK3E9qqO96ndhl5z64tPHRfzcwTd9jMgKYrmxUTq1HYAjzs4IifBOlNJKW7FdxawIDAQAB",
     "permissions": ["history", "bookmarks", "storage", "activeTab"],
     "background": {
         "service_worker": "background.js",

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Installer postinstall for Rotten. Runs as root; Installer writes its output to
+# /var/log/install.log. The package only places files; the configuration profile is what asks
+# Chrome to install the extension, and macOS has the user approve a profile.
+# $3 is the target volume (usually "/").
+
+profile="${3%/}/Library/Application Support/Rotten/rotten-policy.mobileconfig"
+echo "Rotten: to install the extension, open \"$profile\", then approve the profile in System Settings."
+exit 0

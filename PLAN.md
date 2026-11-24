@@ -296,18 +296,18 @@ eq(hostSummary(groupDuplicates([
 
 ### Task 15: Rules check against real history
 
-- [ ] Step 1: Claude drafts the user's personal rules (for example the Fleet instances) as a plain-text file outside the repo, for pasting. They are never written into the repo.
-- [ ] Step 2: Run `tests/history-check.sh` with that file. Bring the findings to the user before changing any rule (DESIGN Build tasks). Known: GitHub repo settings (`/<owner>/<repo>/settings`) aren't matched.
+- [x] Step 1: Claude drafts the user's personal rules (for example the Fleet instances) as a plain-text file outside the repo, for pasting. They are never written into the repo.
+- [x] Step 2: Run `tests/history-check.sh` with that file. Bring the findings to the user before changing any rule (DESIGN Build tasks). Known: GitHub repo settings (`/<owner>/<repo>/settings`) aren't matched.
 
 ### Task 16: Packaging and extension ID
 
 **Files:** Modify `repack.sh`. Create `updates.xml`, `rotten-policy.mobileconfig`, `distribution.xml`, `scripts/postinstall`. Delete `extension/lab.html`, `extension/lab.js`. Release steps live in `.claude/skills/release-process/SKILL.md`; packaging, signing, and notarization use `/Users/Shared/scripty-legacy/build.pkg.sh` (release-process step 4).
 
-- [ ] Step 1: `repack.sh`: `chrome-extension/` becomes `extension/`; rewrite to the shell rules; makes a new `rotten.pem` once (the user backs it up). It writes `rotten-policy.mobileconfig` from a heredoc, like `updates.xml`, never with `PlistBuddy -c Set` (tested: it re-sorts every key alphabetically).
-- [ ] Step 2: `repack.sh` also stages `payload/Library/Application Support/Rotten/` (`.crx`, `updates.xml`, `rotten-policy.mobileconfig` with `file:///Library/Application%20Support/Rotten/` paths). `scripts/postinstall` prints how to install the profile. Confirm `build.pkg.sh`'s argument order against its header before the first run.
-- [ ] Step 3: `distribution.xml` modeled on aeropuerto's (`pkg-ref id` `com.nonpunctual.rotten`). `updates.xml` and `rotten-policy.mobileconfig` start as templates (new `PayloadUUID`s, identifiers `com.nonpunctual.rotten`, key order per `~/.claude/rules/mobileconfig.md`); `repack.sh` fills in the extension ID derived from the key.
-- [ ] Step 4: ID check (DESIGN Build tasks): load `extension/` unpacked and compare its ID with the one from the key. If they differ, add the public key to the manifest as `key`.
-- [ ] Step 5: Run release-process steps 1 to 6 for `3.0.0`. Expected: `Rotten-3.0.0.pkg` passes all three checks in step 5 (signed, stapled, Gatekeeper accepted).
+- [x] Step 1: `repack.sh`: `chrome-extension/` becomes `extension/`; rewrite to the shell rules; makes a new `rotten.pem` once (the user backs it up). It writes `rotten-policy.mobileconfig` from a heredoc, like `updates.xml`, never with `PlistBuddy -c Set` (tested: it re-sorts every key alphabetically).
+- [x] Step 2: `repack.sh` also stages `payload/Library/Application Support/Rotten/` (`.crx`, `updates.xml`, `rotten-policy.mobileconfig` with `file:///Library/Application%20Support/Rotten/` paths). `scripts/postinstall` prints how to install the profile. Confirm `build.pkg.sh`'s argument order against its header before the first run.
+- [x] Step 3: `distribution.xml` modeled on aeropuerto's (`pkg-ref id` `com.nonpunctual.rotten`). `updates.xml` and `rotten-policy.mobileconfig` start as templates (new `PayloadUUID`s, identifiers `com.nonpunctual.rotten`, key order per `~/.claude/rules/mobileconfig.md`); `repack.sh` fills in the extension ID derived from the key.
+- [x] Step 4: ID check (DESIGN Build tasks): load `extension/` unpacked and compare its ID with the one from the key. If they differ, add the public key to the manifest as `key`.
+- [x] Step 5: Run release-process steps 1 to 6 for `3.0.0`. Expected: `Rotten-3.0.0.pkg` passes all three checks in step 5 (signed, stapled, Gatekeeper accepted).
 
 ### Task 17: Install in the real profile (user)
 

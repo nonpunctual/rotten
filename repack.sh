@@ -1,102 +1,129 @@
-#!/bin/bash
+#!/bin/sh
+# Builds Rotten's signed .crx and stages what the .pkg installs.
+# 1. Sets the version in extension/manifest.json.
+# 2. Packs extension/ into rotten-<version>.crx with rotten.pem. If rotten.pem is missing, makes
+#    one: a new key means a new extension ID, so back it up.
+# 3. Writes updates.xml and rotten-policy.mobileconfig from the heredocs below, with the
+#    extension ID derived from the key.
+# 4. Copies all three into payload/Library/Application Support/Rotten/.
+# Usage: ./repack.sh <version>
 
-# This script performs the following build actions:
-#
-# 1. Bumps the chrome-extension/manifest.json to the version supplied on the command line when executing
-# 2. Repacks the Rotten Chrome extension into a signed .crx
-# 3. Rewrites the updates.xml to match
-# 4. Rewrites the .mobileconfig's ExtensionInstallForcelist entry to match
-#
-# The script will reuse a "rotten.pem" certificate file if present so that the extension id stays
-# stable across builds. If the .pem is missing, the script will generate one.
+version="$1"
+dir=$(cd "$(/usr/bin/dirname "$0")" && /bin/pwd)
+chrome="${CHROME_BIN:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
+key="$dir/rotten.pem"
+src="$dir/extension"
+manifest="$src/manifest.json"
+crx="rotten-$version.crx"
+install_url="file:///Library/Application%20Support/Rotten"
+stage="$dir/payload/Library/Application Support/Rotten"
 
-
-if [ $# -ne 1 ] || [ -z "$1" ]; then
-  echo "usage: $(basename "$0") <version>" >&2
-  exit 1
-fi
-VERSION="$1"
-if [[ ! "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]]; then
-  echo "error: version '$VERSION' doesn't look like a version string (e.g. 0.2.4)" >&2
-  exit 1
-fi
-
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CHROME_BIN="${CHROME_BIN:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
-KEY="$DIR/rotten.pem"
-SRC="$DIR/chrome-extension"
-MANIFEST="$SRC/manifest.json"
-UPDATES_XML="$DIR/updates.xml"
-MOBILECONFIG="$DIR/rotten-policy.mobileconfig"
-
-if [ ! -x "$CHROME_BIN" ]; then
-  echo "error: Chrome binary not found at $CHROME_BIN (set CHROME_BIN to override)" >&2
-  exit 1
-fi
-KEY_IS_NEW=0
-if [ ! -f "$KEY" ]; then
-  echo "no $KEY found - generating a new signing key (this gives the extension a new id - a private key can't be recovered/reused across machines)" >&2
-  openssl genrsa -out "$KEY" 2048 2>/dev/null
-  chmod 600 "$KEY"
-  KEY_IS_NEW=1
-fi
-if [ ! -f "$UPDATES_XML" ]; then
-  echo "error: $UPDATES_XML not found" >&2
-  exit 1
-fi
-if [ ! -f "$MOBILECONFIG" ]; then
-  echo "error: $MOBILECONFIG not found" >&2
-  exit 1
+if ! printf '%s\n' "$version" | /usr/bin/grep -qE '^[0-9]+(\.[0-9]+){1,3}$'
+then
+    echo "usage: $(/usr/bin/basename "$0") <version> (e.g. 3.0.0)" >&2; exit 1
 fi
 
-if ! grep -qE '"version": *"[^"]+"' "$MANIFEST"; then
-  echo "error: couldn't find a \"version\" field in $MANIFEST" >&2
-  exit 1
-fi
-sed -i '' -E 's/"version": *"[^"]+"/"version": "'"$VERSION"'"/' "$MANIFEST"
-
-COMPUTED_ID=$(openssl rsa -in "$KEY" -pubout -outform DER 2>/dev/null \
-  | shasum -a 256 | cut -d' ' -f1 | cut -c1-32 | tr '0123456789abcdef' 'abcdefghijklmnop')
-
-if [ "$KEY_IS_NEW" = "1" ]; then
-  EXT_ID="$COMPUTED_ID"
-else
-  EXT_ID=$(grep -oE "appid='[a-p]+'" "$UPDATES_XML" | head -1 | sed -E "s/appid='([a-p]+)'/\1/")
-  if [ -z "$EXT_ID" ]; then
-    echo "error: couldn't read appid from $UPDATES_XML" >&2
-    exit 1
-  fi
-  if [ "$COMPUTED_ID" != "$EXT_ID" ]; then
-    echo "error: rotten.pem's derived id ($COMPUTED_ID) doesn't match updates.xml's appid ($EXT_ID) - wrong key file?" >&2
-    exit 1
-  fi
+if [ ! -x "$chrome" ]
+then
+    echo "error: no Chrome at $chrome (set CHROME_BIN)" >&2; exit 1
 fi
 
-OUT_CRX="$DIR/rotten-$VERSION.crx"
-
-"$CHROME_BIN" --pack-extension="$SRC" --pack-extension-key="$KEY" >/dev/null
-
-GENERATED="$DIR/chrome-extension.crx"
-if [ ! -f "$GENERATED" ]; then
-  echo "error: expected $GENERATED after packing, not found" >&2
-  exit 1
+if ! /usr/bin/grep -qE '"version": *"[^"]+"' "$manifest"
+then
+    echo "error: no \"version\" in $manifest" >&2; exit 1
 fi
-mv -f "$GENERATED" "$OUT_CRX"
 
-# Drop older versioned crx files so the dir doesn't accumulate stale builds.
-find "$DIR" -maxdepth 1 -name 'rotten-*.crx' ! -name "$(basename "$OUT_CRX")" -exec rm -f {} +
+if [ ! -f "$key" ]
+then
+    echo "no rotten.pem: making a new signing key. A new key means a new extension ID; back it up." >&2
+    if ! (umask 077; /usr/bin/openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$key" 2>/dev/null)
+    then
+        echo "error: making $key failed" >&2; exit 1
+    fi
+fi
 
-cat > "$UPDATES_XML" <<EOF
+# Extension ID: the first 32 hex digits of the SHA-256 of the DER public key, 0-f mapped to a-p.
+id_of_der(){
+    /usr/bin/shasum -a 256 | /usr/bin/cut -c1-32 | /usr/bin/tr '0123456789abcdef' 'abcdefghijklmnop'
+}
+ext_id=$(/usr/bin/openssl pkey -in "$key" -pubout -outform DER 2>/dev/null | id_of_der)
+
+# The manifest's "key" (base64 DER public key) sets the unpacked ID; it must come from rotten.pem.
+manifest_key=$(/usr/bin/jq -r '.key // empty' "$manifest")
+if [ -n "$manifest_key" ]
+then
+    manifest_id=$(printf '%s' "$manifest_key" | /usr/bin/base64 -D | id_of_der)
+    if [ "$manifest_id" != "$ext_id" ]
+    then
+        echo "error: rotten.pem's ID ($ext_id) differs from the manifest key's ($manifest_id): wrong key file?" >&2; exit 1
+    fi
+fi
+
+/usr/bin/sed -i '' -E 's/"version": *"[^"]+"/"version": "'"$version"'"/' "$manifest"
+
+/bin/rm -f "$dir/extension.crx"
+"$chrome" --pack-extension="$src" --pack-extension-key="$key" > /dev/null 2>&1
+if [ ! -f "$dir/extension.crx" ]
+then
+    echo "error: Chrome wrote no $dir/extension.crx" >&2; exit 1
+fi
+/bin/mv -f "$dir/extension.crx" "$dir/$crx"
+/usr/bin/find "$dir" -maxdepth 1 -name 'rotten-*.crx' ! -name "$crx" -exec /bin/rm -f {} +
+
+/bin/cat > "$dir/updates.xml" <<EOF
 <?xml version='1.0' encoding='UTF-8'?>
 <gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
-  <app appid='$EXT_ID'>
-    <updatecheck codebase='file://$OUT_CRX' version='$VERSION' />
-  </app>
+    <app appid='$ext_id'>
+        <updatecheck codebase='$install_url/$crx' version='$version' />
+    </app>
 </gupdate>
 EOF
 
-/usr/libexec/PlistBuddy -c "Set :PayloadContent:0:ExtensionInstallForcelist:0 $EXT_ID;file://$UPDATES_XML" "$MOBILECONFIG"
+/bin/cat > "$dir/rotten-policy.mobileconfig" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>ExtensionInstallForcelist</key>
+            <array>
+                <string>$ext_id;$install_url/updates.xml</string>
+            </array>
+            <key>PayloadDisplayName</key>
+            <string>Google Chrome</string>
+            <key>PayloadIdentifier</key>
+            <string>com.nonpunctual.rotten.chrome</string>
+            <key>PayloadType</key>
+            <string>com.google.Chrome</string>
+            <key>PayloadUUID</key>
+            <string>1C39AF44-D11C-4DEC-A66C-B58E981D78EA</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+        </dict>
+    </array>
+    <key>PayloadDisplayName</key>
+    <string>Rotten</string>
+    <key>PayloadIdentifier</key>
+    <string>com.nonpunctual.rotten</string>
+    <key>PayloadScope</key>
+    <string>System</string>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>AEA7E620-40E5-4954-BF99-E23A4877881C</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+</dict>
+</plist>
+EOF
 
-echo "Packed rotten-$VERSION.crx (extension id $EXT_ID)"
-echo "updates.xml now points at file://$OUT_CRX"
-echo "rotten-policy.mobileconfig's ExtensionInstallForcelist now points at extension id $EXT_ID"
+/bin/mkdir -p "$stage" || exit 1
+/bin/rm -f "$stage"/rotten-*.crx
+/bin/cp "$dir/$crx" "$dir/updates.xml" "$dir/rotten-policy.mobileconfig" "$stage/" || exit 1
+# Chrome writes the .crx as 600; installed as root, Chrome (running as the user) must read it.
+/bin/chmod 644 "$stage/$crx" "$stage/updates.xml" "$stage/rotten-policy.mobileconfig"
+
+echo "packed $crx, extension ID $ext_id"
+echo "wrote updates.xml and rotten-policy.mobileconfig; staged all three in $stage"

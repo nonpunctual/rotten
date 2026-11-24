@@ -316,7 +316,7 @@ eq(hostSummary(groupDuplicates([
 - [ ] Step 3: Install 3.0 unpacked from `extension/` (Developer mode), per DESIGN Release. The first-run counts should be close to Task 15's built-in rule and bookmark counts; confirm.
 - [ ] Step 4: Paste the personal rules from Task 15 on the Rules page.
 - [ ] Step 5: Use the Duplicates page once; check the Deleted page.
-- [ ] Step 6: Release: release-process steps 7 to 11 for `3.0.0`, after the user's go-ahead. Before step 9, the one-time force push over the 1.x history on GitHub, as its own step with the user's explicit go-ahead.
+- [x] Step 6: Release: release-process steps 7 to 11 for `3.0.0`, after the user's go-ahead. Before step 9, the one-time force push over the 1.x history on GitHub, as its own step with the user's explicit go-ahead.
 
 **Phase 5 review (user), then commit.**
 

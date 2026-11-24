@@ -254,9 +254,9 @@ eq(parseRuleList("github.com/search\n\n https://X.com/a/ \nbad host!"),
 
 **Files:** Create `extension/lib/duplicates.js`, `tests/duplicates.test.js`.
 
-**Interfaces:** `ID_PARAMS = {"youtube.com/watch": "v", "news.ycombinator.com/item": "id"}` (keys use the host without a leading `www.`); `baseUrl(parsed) -> string`; `groupDuplicates(items: {url, visitCount}[]) -> Map<base, {host, urls: string[], visits: number}>` (web URLs only); `hostSummary(groups) -> {host, duplicates}[]` (duplicates = sum of `visits - 1` over groups with more than 1 visit; sorted by duplicates, then host); `planDeletes(visitsByUrl: Map<url, {visitTime}[]>) -> {url, visitTime}[]` (every visit except the single oldest in the group, oldest first).
+**Interfaces:** `ID_PARAMS = {"youtube.com/watch": "v", "news.ycombinator.com/item": "id"}` (keys use the host without a leading `www.`); `baseUrl(parsed) -> string`; `groupDuplicates(items: {url, visitCount}[]) -> Map<base, {host, urls: string[], visits: number}>` (web URLs only); `hostSummary(groups) -> {host, duplicates}[]` (duplicates = sum of `visits - 1` over groups with more than 1 visit; sorted by duplicates, then host); `planDeletes(visitsByUrl: Map<url, {visitTime}[]>) -> {deletes, skipped}`, each `{url, visitTime}[]` (every visit except the single oldest in the group, oldest first; a visit is skipped when the oldest is at or after `floor(visitTime) - 1`, since its delete window would also delete the oldest. Changed 2026-11-24 in Task 14 from a single list).
 
-- [ ] Step 1: Tests:
+- [x] Step 1: Tests:
 
 ```js
 const b = (u) => baseUrl(parseUrl(u));
@@ -278,17 +278,17 @@ eq(hostSummary(groupDuplicates([
 ])), [{host: "x.com", duplicates: 4}], "summary");
 ```
 
-- [ ] Step 2: Run; expect failures. Step 3: implement. Step 4: run; all `ok`.
-- [ ] Step 5: Add duplicates to `tests/history-check.js`: duplicates removed and entries left, using `groupDuplicates` on what the rules and bookmarks leave (visit counts per URL from the export).
+- [x] Step 2: Run; expect failures. Step 3: implement. Step 4: run; all `ok`.
+- [x] Step 5: Add duplicates to `tests/history-check.js`: duplicates removed and entries left, using `groupDuplicates` on what the rules and bookmarks leave (visit counts per URL from the export).
 
 ### Task 14: Duplicates page
 
 **Files:** Create `extension/duplicates.html`, `extension/duplicates.js`.
 
-- [ ] Step 1: On load, `searchAll()`, then `groupDuplicates`, then `hostSummary`. The list counts come from `visitCount`, labeled approximate (Claude's call).
-- [ ] Step 2: Clicking a host shows its pages (base URLs) with visit counts, most first. Each page has **Make rule**, which opens `rules.html?add=<ruleFromUrl(page)>`.
-- [ ] Step 3: **Delete duplicates** for the host: `getVisits` for each URL in the host's groups, then `planDeletes` per group; confirm "Delete N entries?" with the exact N; `deleteVisits(plan, "duplicate", progress)`; show deleted and skipped counts; refresh.
-- [ ] Step 4 (user, lab profile): visit `https://example.org/`, `https://example.org/?a=1`, and `https://example.org/?a=2` several times each (not `example.com`, which Task 8 bookmarked). The Duplicates page lists `example.org`; Delete leaves exactly one example.org entry in chrome://history, the oldest; the Deleted page shows `duplicate` entries; skipped is 0.
+- [x] Step 1: On load, `searchAll()`, then `groupDuplicates`, then `hostSummary`. The list counts come from `visitCount`, labeled approximate (Claude's call).
+- [x] Step 2: Clicking a host shows its pages (base URLs) with visit counts, most first. Each page has **Make rule**, which opens `rules.html?add=<ruleFromUrl(page)>`.
+- [x] Step 3: **Delete duplicates** for the host: `getVisits` for each URL in the host's groups, then `planDeletes` per group; confirm "Delete N entries?" with the exact N; `deleteVisits(plan, "duplicate", progress)`; show deleted and skipped counts; refresh.
+- [x] Step 4 (user, lab profile): visit `https://example.org/`, `https://example.org/?a=1`, and `https://example.org/?a=2` several times each (not `example.com`, which Task 8 bookmarked). The Duplicates page lists `example.org`; Delete leaves exactly one example.org entry in chrome://history, the oldest; the Deleted page shows `duplicate` entries; skipped is 0.
 
 **Phase 4 review (user) with `tests/history-check.sh`, then commit.**
 

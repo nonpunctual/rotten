@@ -211,6 +211,22 @@ async function bulkTiming() {
     };
 }
 
+// Task 14: 3,000 visits of one URL for the Duplicates page to delete (re-times deleteVisits,
+// which adds a search per visit). rotten-dup.test matches no lab rule or auth word.
+
+async function dupSetup() {
+    const url = `https://rotten-dup.test/${run}/page`;
+    for (let i = 0; i < 3000; i++) {
+        await chrome.history.addUrl({url});
+        await sleep(3);
+        if (i % 500 === 0) {
+            show("dups", {running: true, added: i});
+        }
+    }
+    const times = await visitTimes(url);
+    return {url, added: 3000, visitsFound: times.length, oldest: times[0]};
+}
+
 // Step 6: 200,000 log entries in IndexedDB.
 
 function request(req) {
@@ -279,7 +295,7 @@ async function logCapacity() {
 
 // Wiring.
 
-const STEPS = {parser: parserCheck, single: singleVisit, cap: searchCap, bulk: bulkTiming, log: logCapacity};
+const STEPS = {parser: parserCheck, single: singleVisit, cap: searchCap, bulk: bulkTiming, log: logCapacity, dups: dupSetup};
 
 for (const button of document.querySelectorAll("button[data-step]")) {
     const step = button.dataset.step;

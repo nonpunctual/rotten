@@ -3,6 +3,7 @@ import "./url.test.js";
 import "./rules.test.js";
 import "./log.test.js";
 import "./save-rule.test.js";
+import "./duplicates.test.js";
 
 eq(1, 1, "harness");
 

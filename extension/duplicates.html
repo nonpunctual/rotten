@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Rotten duplicates</title>
+<style>
+body { font: 14px system-ui, sans-serif; margin: 24px; max-width: 1000px; }
+table { border-collapse: collapse; width: 100%; }
+#list table { width: auto; }
+th { text-align: left; }
+th, td { padding: 3px 12px 3px 0; vertical-align: top; }
+td.n { text-align: right; white-space: nowrap; }
+td.url { width: 100%; word-break: break-all; font: 13px ui-monospace, monospace; }
+td.make { white-space: nowrap; }
+button.host { all: unset; cursor: pointer; color: LinkText; text-decoration: underline; }
+#status { min-height: 1.2em; font-weight: 600; }
+progress { width: 320px; }
+</style>
+<script type="module" src="duplicates.js"></script>
+</head>
+<body>
+<h1>Duplicates</h1>
+<p>Hosts with repeat visits, most first. Counts are approximate (Chrome's visit counts); Delete counts
+every visit first and asks with the exact number. The oldest visit of each page is kept.</p>
+<p id="status">Loading...</p>
+<p><progress id="progress" hidden></progress></p>
+
+<section id="detail" hidden>
+<p><button id="back" type="button">All hosts</button></p>
+<h2 id="detail-host"></h2>
+<p><button id="delete" type="button">Delete duplicates</button></p>
+<table>
+<thead><tr><th>Visits</th><th>Page</th><th></th></tr></thead>
+<tbody id="pages"></tbody>
+</table>
+</section>
+
+<section id="list">
+<table>
+<thead><tr><th>Duplicates (about)</th><th>Host</th></tr></thead>
+<tbody id="hosts"></tbody>
+</table>
+</section>
+
+<dialog id="confirm">
+<form method="dialog">
+<p id="confirm-text"></p>
+<button value="ok">Delete</button> <button value="cancel">Cancel</button>
+</form>
+</dialog>
+</body>
+</html>

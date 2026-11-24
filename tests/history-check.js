@@ -4,6 +4,7 @@
 
 import {parseUrl, isWeb} from "../extension/lib/url.js";
 import {parseRule, formatRule, matchRule, firstMatch, defaultRules, ruleFromUrl, parseRuleList} from "../extension/lib/rules.js";
+import {groupDuplicates, hostSummary} from "../extension/lib/duplicates.js";
 
 const [urlsPath, bookmarksPath, personalPath] = arguments;
 const items = JSON.parse(readFile(urlsPath));
@@ -60,6 +61,13 @@ print(`deleted by rules: ${counts(ruled)}`);
 print(`deleted as bookmarks: ${counts(bookmarked)}`);
 print(`left: ${counts(left)}`);
 
+// Duplicates in what the rules and bookmarks leave, from visit counts (the Duplicates page's counts).
+const groups = groupDuplicates(left.map((item) => ({url: item.url, visitCount: item.visits})));
+const summary = hostSummary(groups);
+const duplicates = sum(summary, "duplicates");
+print(`duplicates removed: ${duplicates} visits (${summary.length} hosts)`);
+print(`entries left after duplicates: ${sum(left, "visits") - duplicates} visits`);
+
 // Pages whose toolbar prefill (ruleFromUrl) doesn't parse back into a rule that matches them.
 const misses = items.filter((item) => {
     const parsed = parseUrl(item.url);
@@ -85,6 +93,12 @@ for (const item of left) {
 const topHosts = [...hosts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 25);
 for (const [host, visits] of topHosts) {
     print(`  ${String(visits).padStart(6)}  ${host}`);
+}
+
+print("");
+print("top 25 hosts by duplicates:");
+for (const {host, duplicates: n} of summary.slice(0, 25)) {
+    print(`  ${String(n).padStart(6)}  ${host}`);
 }
 
 print("");

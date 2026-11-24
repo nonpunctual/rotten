@@ -79,7 +79,8 @@ function escapeRegExp(text) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Whole-word match in the host or the decoded path; a boundary is anything but [a-z0-9].
+// Whole-word match in the host or the decoded path, as grep -w defines a word:
+// letters (any script), digits, and _ are word characters; anything else is a boundary.
 function matchWords(words, parsed) {
     const list = words
         .filter((w) => typeof w === "string" && w.trim() !== "")
@@ -87,7 +88,7 @@ function matchWords(words, parsed) {
     if (list.length === 0) {
         return false;
     }
-    const re = new RegExp(`(?:^|[^a-z0-9])(?:${list.join("|")})(?=[^a-z0-9]|$)`);
+    const re = new RegExp(`(?<![\\p{L}\\p{N}_])(?:${list.join("|")})(?![\\p{L}\\p{N}_])`, "u");
     return re.test(parsed.host) || re.test(decodePath(parsed.path).toLowerCase());
 }
 

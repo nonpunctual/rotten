@@ -58,7 +58,15 @@ eq(matchRule(r("x.com/a"), p("https://x.com/a/")), true, "trailing slash in url"
 eq(matchRule({id: "w", builtIn: false, words: []}, p("https://x.com/")), false, "empty word list");
 eq(matchRule({id: "w", builtIn: false, words: [""]}, p("https://x.com/")), false, "blank word");
 eq(matchRule({id: "w", builtIn: false, words: ["a.b"]}, p("https://x.com/axb")), false, "words escaped");
-eq(matchRule(auth, p("https://x.com/user_login")), true, "underscore is a boundary");
+// Whole words as grep -w defines them: letters, digits, and _ are word characters.
+eq(matchRule(auth, p("https://x.com/user_login")), false, "underscore is a word character");
+eq(matchRule(auth, p("https://x.com/admin/app/macos_platform_sso/instance/1/")), false, "sso inside an app name");
+eq(matchRule(auth, p("https://x.com/login2")), false, "digit is a word character");
+eq(matchRule(auth, p("https://x.com/%C3%A9login")), false, "accented letter is a word character");
+eq(matchRule(auth, p("https://x.com/%C3%A9/login")), true, "slash after accented letter is a boundary");
+eq(matchRule(auth, p("https://x.com/a.sso-b")), true, "dot and hyphen are boundaries");
+eq(matchRule(auth, p("https://x.com/oauth2/token")), true, "oauth2 is its own word");
+eq(matchRule({id: "w", builtIn: false, words: ["oauth"]}, p("https://x.com/oauth2/token")), false, "oauth alone misses oauth2");
 eq(matchRule(auth, p("https://x.com/sign-in")), true, "hyphenated word");
 eq(matchRule(auth, p("https://x.com/LOGIN")), true, "auth case-insensitive");
 eq(matchRule(auth, p("https://x.com/log%69n")), true, "auth on decoded path");

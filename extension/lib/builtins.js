@@ -12,6 +12,7 @@ export const BUILT_IN_RULES = [
     "www.google.com/search",
     "google.com/search",
     "duckduckgo.com/?q",
+    "duckduckgo.com/y.js",
     "github.com/search",
     "github.com/sessions",
     "github.com/settings",

@@ -43,6 +43,43 @@ export function formatRule(rule) {
     return rule.host + rule.path;
 }
 
+// Rule text for a page: host (no port) and path, without trailing slashes, so a root page means
+// the whole host. "" for non-web URLs. Pages no rule can express (e.g. an IPv6 host) still get
+// their text, so saving reports it invalid.
+export function ruleFromUrl(url) {
+    const parsed = parseUrl(url);
+    if (!isWeb(parsed)) {
+        return "";
+    }
+    return parsed.host + parsed.path.replace(/\/+$/, "");
+}
+
+// A pasted list, one rule per line. Blank lines are skipped, repeats dropped,
+// and lines that don't parse are returned trimmed in invalid.
+export function parseRuleList(text) {
+    const rules = [];
+    const invalid = [];
+    const seen = new Set();
+    for (const line of text.split(/\r?\n/)) {
+        if (line.trim() === "") {
+            continue;
+        }
+        const rule = parseRule(line);
+        if (!rule) {
+            invalid.push(line.trim());
+        } else if (!seen.has(formatRule(rule))) {
+            seen.add(formatRule(rule));
+            rules.push(rule);
+        }
+    }
+    return {rules, invalid};
+}
+
+// The auth words row: words separated by whitespace, lowercased, repeats dropped.
+export function parseWords(text) {
+    return [...new Set(text.toLowerCase().split(/\s+/).filter((word) => word !== ""))];
+}
+
 function matchHost(pattern, host) {
     if (pattern.startsWith("*.")) {
         const base = pattern.slice(2);

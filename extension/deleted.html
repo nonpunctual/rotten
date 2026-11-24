@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Rotten deleted</title>
+<style>
+body { font: 14px system-ui, sans-serif; margin: 24px; }
+table { border-collapse: collapse; width: 100%; }
+th { text-align: left; }
+th, td { padding: 3px 12px 3px 0; vertical-align: top; }
+td:first-child, td:nth-child(2) { white-space: nowrap; }
+td:last-child { word-break: break-all; font: 13px ui-monospace, monospace; }
+</style>
+<script type="module" src="deleted.js"></script>
+</head>
+<body>
+<h1>Deleted</h1>
+<p>Everything Rotten deleted from history, newest first. <button id="export" type="button">Export</button></p>
+<p id="status">Loading...</p>
+<table>
+<thead><tr><th>Time</th><th>Reason</th><th>URL</th></tr></thead>
+<tbody id="log"></tbody>
+</table>
+<p><button id="older" type="button" hidden>Older</button></p>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Rotten</title>
+<style>
+body { width: 340px; font: 13px system-ui, sans-serif; margin: 12px; }
+input { width: 100%; box-sizing: border-box; }
+p { margin: 8px 0; }
+nav a { margin-right: 12px; }
+</style>
+<script type="module" src="popup.js"></script>
+</head>
+<body>
+<form id="form">
+<label for="rule">Delete rule for this page</label>
+<input id="rule" spellcheck="false" autocomplete="off">
+<p><button id="save" type="submit">Save</button></p>
+</form>
+<div id="confirm" hidden>
+<p id="preview"></p>
+<p><button id="yes" type="button">Save</button> <button id="no" type="button">Cancel</button></p>
+</div>
+<p id="status"></p>
+<nav>
+<a href="duplicates.html">Duplicates</a>
+<a href="rules.html">Rules</a>
+<a href="deleted.html">Deleted</a>
+</nav>
+</body>
+</html>

@@ -3,7 +3,7 @@
 // else exact bookmark URL. Prints to the terminal only.
 
 import {parseUrl, isWeb} from "../extension/lib/url.js";
-import {parseRule, formatRule, firstMatch, defaultRules} from "../extension/lib/rules.js";
+import {parseRule, formatRule, matchRule, firstMatch, defaultRules, ruleFromUrl, parseRuleList} from "../extension/lib/rules.js";
 
 const [urlsPath, bookmarksPath, personalPath] = arguments;
 const items = JSON.parse(readFile(urlsPath));
@@ -11,16 +11,12 @@ const bookmarks = new Set(readFile(bookmarksPath).split("\n").filter((line) => l
 
 const rules = defaultRules();
 if (personalPath) {
-    for (const line of readFile(personalPath).split("\n")) {
-        if (line.trim() === "") {
-            continue;
-        }
-        const parsed = parseRule(line);
-        if (parsed) {
-            rules.push({id: `personal:${formatRule(parsed)}`, builtIn: false, ...parsed});
-        } else {
-            print(`invalid rule line: ${line}`);
-        }
+    const {rules: personal, invalid} = parseRuleList(readFile(personalPath));
+    for (const line of invalid) {
+        print(`invalid rule line: ${line}`);
+    }
+    for (const parsed of personal) {
+        rules.push({id: `personal:${formatRule(parsed)}`, builtIn: false, ...parsed});
     }
 }
 
@@ -63,6 +59,20 @@ const ruled = [...byRule.values()].flat();
 print(`deleted by rules: ${counts(ruled)}`);
 print(`deleted as bookmarks: ${counts(bookmarked)}`);
 print(`left: ${counts(left)}`);
+
+// Pages whose toolbar prefill (ruleFromUrl) doesn't parse back into a rule that matches them.
+const misses = items.filter((item) => {
+    const parsed = parseUrl(item.url);
+    if (!isWeb(parsed)) {
+        return false;
+    }
+    const rule = parseRule(ruleFromUrl(item.url));
+    return !rule || !matchRule({id: "prefill", builtIn: false, ...rule}, parsed);
+});
+print(`toolbar prefill not a working rule: ${counts(misses)}`);
+for (const item of misses.slice(0, 10)) {
+    print(`    ${short(item.url)}`);
+}
 
 print("");
 print("top 25 hosts left (visits):");

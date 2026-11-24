@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Rotten rules</title>
+<style>
+body { font: 14px system-ui, sans-serif; margin: 24px; max-width: 900px; }
+input, textarea { font: 13px ui-monospace, monospace; box-sizing: border-box; }
+#add { width: 420px; }
+#paste { width: 100%; }
+table { border-collapse: collapse; width: 100%; }
+td { padding: 3px 6px 3px 0; }
+td:first-child { width: 100%; }
+td input { width: 100%; }
+td:nth-child(2) { white-space: nowrap; }
+#status { min-height: 1.2em; font-weight: 600; }
+#invalid { color: #b00020; }
+</style>
+<script type="module" src="rules.js"></script>
+</head>
+<body>
+<h1>Rules</h1>
+<p>A rule deletes every matching entry: existing history when it's saved, and later visits.
+Write a rule like a URL without the scheme: <code>github.com/search</code>, <code>*.linkedin.com</code>, <code>duckduckgo.com/?q</code>.</p>
+<p id="status"></p>
+
+<h2>Add a rule</h2>
+<form id="add-form">
+<input id="add" spellcheck="false" autocomplete="off"> <button type="submit">Add</button>
+</form>
+
+<h2>Paste a list</h2>
+<form id="paste-form">
+<p><textarea id="paste" rows="6" spellcheck="false" placeholder="One rule per line"></textarea></p>
+<button type="submit">Add all</button>
+</form>
+<div id="invalid"></div>
+
+<h2>All rules</h2>
+<table><tbody id="rules"></tbody></table>
+
+<dialog id="confirm">
+<form method="dialog">
+<p id="confirm-text"></p>
+<button id="confirm-ok" value="ok">Save</button> <button value="cancel">Cancel</button>
+</form>
+</dialog>
+</body>
+</html>

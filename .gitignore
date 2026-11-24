@@ -2,13 +2,9 @@
 CLAUDE.md
 .claude/
 
-chrome_history_archive.db
-chrome.history.archive.db
 *history.json
 rotten.pem
 *.pkg
 *.crx
-DESIGN.md
-PLAN.md
 payload/
 .superpowers/

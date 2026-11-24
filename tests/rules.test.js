@@ -1,6 +1,6 @@
 import {eq} from "./assert.js";
-import {parseUrl} from "../extension/lib/url.js";
-import {parseRule, formatRule, matchRule, firstMatch, matchingItems, defaultRules} from "../extension/lib/rules.js";
+import {parseUrl, isWeb} from "../extension/lib/url.js";
+import {parseRule, formatRule, matchRule, firstMatch, matchingItems, defaultRules, ruleFromUrl, parseRuleList, parseWords} from "../extension/lib/rules.js";
 import {BUILT_IN_RULES, AUTH_WORDS} from "../extension/lib/builtins.js";
 
 const r = (t) => ({id: t, builtIn: false, ...parseRule(t)});
@@ -82,3 +82,38 @@ eq(firstMatch(rules, p("https://y.com/")), null, "no match");
 eq(firstMatch(rules, null), null, "first match null");
 eq(matchingItems(rules, [{url: "https://x.com/z"}, {url: "https://y.com/"}, {url: "chrome://x.com/"}]),
     [{url: "https://x.com/z"}], "matching items");
+
+// Task 9: rule text helpers.
+eq(ruleFromUrl("https://www.linkedin.com/feed/"), "www.linkedin.com/feed", "toolbar prefill");
+eq(ruleFromUrl("https://example.com/"), "example.com", "root page means whole host");
+eq(ruleFromUrl("chrome://history/"), "", "non-web");
+eq(parseRuleList("github.com/search\n\n https://X.com/a/ \nbad host!"),
+    {rules: [{host: "github.com", path: "/search"}, {host: "x.com", path: "/a"}],
+        invalid: ["bad host!"]}, "paste");
+
+// Beyond the plan's list.
+eq(ruleFromUrl("http://localhost:3000/a"), "localhost/a", "prefill drops the port");
+eq(ruleFromUrl("https://x.com/a?q=1#f"), "x.com/a", "prefill drops query and fragment");
+eq(ruleFromUrl("not a url"), "", "prefill garbage");
+eq(ruleFromUrl("http://[::1]:8080/a"), "[::1]/a", "prefill an ipv6 host as text");
+const roundTripMisses = JSON.parse(readFile("tests/fixtures/urls.json")).filter((url) => {
+    if (!isWeb(p(url))) {
+        return false;
+    }
+    const rule = parseRule(ruleFromUrl(url));
+    return !rule || !matchRule({id: "t", builtIn: false, ...rule}, p(url));
+});
+eq(roundTripMisses, ["http://[::1]/", "http://[::1]:8080/a", "http://[2001:db8::1]/", "https://example.com./"],
+    "prefill round trip over fixtures");
+eq(parseRuleList("x.com/a\r\ny.com\r\n"), {rules: [{host: "x.com", path: "/a"}, {host: "y.com", path: ""}], invalid: []}, "paste crlf");
+eq(parseRuleList("x.com\nhttps://X.com\nx.com/"), {rules: [{host: "x.com", path: ""}, {host: "x.com", path: "/"}], invalid: []}, "paste drops repeats");
+eq(parseRuleList(""), {rules: [], invalid: []}, "paste empty");
+
+// Task 11: the auth words row.
+eq(parseWords(" Login  logout\nSSO login "), ["login", "logout", "sso"], "words lowercased, repeats dropped");
+eq(parseWords("   "), [], "no words");
+
+// Built-in duckduckgo.com/y.js (the user's decision, 2026-11-24): DuckDuckGo ad clicks.
+eq(firstMatch(defaultRules(), p("https://duckduckgo.com/y.js?ad_domain=x.com&ad_provider=b&ad_type=t&u3=https%3A%2F%2Fx.com"))?.id,
+    "builtin:duckduckgo.com/y.js", "built-in ddg ad click");
+eq(firstMatch(defaultRules(), p("https://duckduckgo.com/about")), null, "other ddg pages stay");

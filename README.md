@@ -7,8 +7,8 @@
 Rotten is a Google Chrome extension that keeps your browsing history from becoming rotten.
 
 - **Duplicates:** 1-click deletion of repeat page visits in Chrome history. The earliest visit is kept.
-- **Noise:** Delete entries that match existing history by saved rule. Later visits are deleted from making new history entries.
-- **Bookmarks:** Bookmarking a page deletes its history. Later visits are deleted from making new history entries. (Uses exact URL match.)
+- **Noise:** Delete entries that match saved rules. Later visits will not make new history entries.
+- **Bookmarks:** Bookmark a page. Later visits will not make new history entries. (Uses exact URL match.)
 
 Rotten also includes `archive.chrome.history.sh`: a standalone script that backs up your Chrome history to a local SQLite database. Archived rows are never removed so your history survives past Chrome's 90-day retention window.
 
@@ -19,25 +19,11 @@ Rotten also includes `archive.chrome.history.sh`: a standalone script that backs
 
 ## Screenshots
 
-<img src="docs/popup.png" width="381" alt="Popup"><br>
-**What you see when you click the extension icon**
+<img src="docs/popup.png" width="391" alt="Popup"><br>
 
----
+<img src="docs/duplicates.png" width="484" alt="Duplicates page"><br>
 
-<img src="docs/duplicates.png" width="1021" alt="Duplicates page"><br>
-**1-click deletion of all repeated history entries**
-
----
-
-<img src="docs/rules.png" width="1416" alt="Rules page"><br>
-**Add a rule**
-
----
-
-<img src="docs/deleted.png" width="671" alt="Deleted page">
-**Logged deletions**
-
----
+<img src="docs/rules.png" width="570" alt="Rules page">
 
 ## Install
 

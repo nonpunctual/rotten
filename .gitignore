@@ -10,3 +10,5 @@ payload/
 .superpowers/
 chrome.history.archive.db*
 rotten-personal-rules.txt
+PLAN.md
+DESIGN.md

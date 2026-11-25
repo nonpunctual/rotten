@@ -57,7 +57,7 @@ Hosts with repeat visits, most first. Click a host to see its pages and their vi
 
 ### Rules
 
-Every rule, built-in and added, each editable and removable. Add one rule, or paste a list. See [Rules](#rules).
+Every rule, built-in and added, each editable and removable. Add one rule, or paste a list.
 
 ## Install
 

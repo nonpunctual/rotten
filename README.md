@@ -6,13 +6,11 @@
 
 Rotten is a Google Chrome extension that keeps your browsing history from becoming rotten.
 
-- **Duplicates:** allows 1-click deletion of every repeat visit to a page keeping the first vist.
-- **Noise:** deletes entries that match - existing history when a rule is saved and later visits as they happen.
-- **Bookmarks:** bookmarking a page deletes its history and later visits to it are deleted if it's visited again (uses exact URL match.)
+- **Duplicates:** 1-click deletion of repeat page visits in Chrome history. The earliest visit is kept.
+- **Noise:** Delete entries that match existing history by saved rule. Later visits are deleted from making new history entries.
+- **Bookmarks:** Bookmarking a page deletes its history. Later visits are deleted from making new history entries. (Uses exact URL match.)
 
-Built-in rules are simply examples that are saved when Rotten is installed. All can be edited or removed. Add your own [Rules](#rules)!
-
-Rotten also includes `archive.chrome.history.sh`: a standalone script that backs up your Chrome History to a local SQLite database. Archived rows are never removed so your history survives past Chrome's 90-day retention window.
+Rotten also includes `archive.chrome.history.sh`: a standalone script that backs up your Chrome history to a local SQLite database. Archived rows are never removed so your history survives past Chrome's 90-day retention window.
 
 ```sh
 ./archive.chrome.history.sh --dry-run   # preview
@@ -21,43 +19,25 @@ Rotten also includes `archive.chrome.history.sh`: a standalone script that backs
 
 ## Screenshots
 
-**What you see when you click the extension icon:**
 <img src="docs/popup.png" width="381" alt="Popup"><br>
+**What you see when you click the extension icon**
 
-**1-click deletion of all repeated History entries:**
+---
+
 <img src="docs/duplicates.png" width="1021" alt="Duplicates page"><br>
+**1-click deletion of all repeated history entries**
 
-**Add a rule:**
+---
+
 <img src="docs/rules.png" width="1416" alt="Rules page"><br>
+**Add a rule**
 
-**Logged deletions:**
+---
+
 <img src="docs/deleted.png" width="671" alt="Deleted page">
+**Logged deletions**
 
-## Pages
-
-### Quick Start
-
-Installing Rotten opens the first-run page. It counts the existing history matched by the built-in rules and by your bookmarks and one click of the **Delete** button deletes. After install, rules and bookmarks also delete new visits as they happen.
-
-### Popup
-
-Click the toolbar icon on a web page to make a rule for it. The field is prefilled with the page's host and path; a site's root page becomes the whole host. Edit it, **Save**, and confirm. The popup links to the Duplicates, Rules, and Deleted pages.
-
-### Duplicates
-
-Click a host to see its pages and their visit counts; **Make rule** opens the Rules page with that page filled in. **Delete duplicates** counts every visit, asks "Delete N entries from host?", and deletes every visit to each page except the oldest. Nothing is deleted automatically.
-
-### Rules
-
-| Rule | Deletes |
-| --- | --- |
-| Apple sign-in | Every page on `idmsa.apple.com`. |
-| Google Apps | Every page on `accounts`, `calendar`, `chat`, `contacts`, `docs`, `drive`, `keep`, `mail`, and `meet.google.com`. |
-| Google search | `google.com/search` and `www.google.com/search`. |
-| DuckDuckGo | Searches (`duckduckgo.com/?q`) and ad clicks (`duckduckgo.com/y.js`). |
-| GitHub | `github.com/search`, `/sessions`, `/settings`, and a repo's edit and compare pages (`github.com/*/*/edit`, `github.com/*/*/compare`). |
-| LinkedIn | Every page on `linkedin.com` and its subdomains (`*.linkedin.com`). |
-| Authentication strings | Any URL whose host or path contains `login`, `logout`, `oauth`, `oauth2`, `authorize`, `auth`, `signin`, `sign-in`, `sign-on`, or `sso` as a whole word (as `grep -w` defines one: letters, digits, and `_` are word characters).
+---
 
 ## Install
 
@@ -86,3 +66,31 @@ The package only places files. To install the extension, open `rotten-policy.mob
 `repack.sh` sets the version in `extension/manifest.json`, packs `extension/` into `rotten-<version>.crx` signed with `rotten.pem`, writes `updates.xml` and `rotten-policy.mobileconfig` with the extension ID, and stages all three in `payload/Library/Application Support/Rotten/`. It needs Google Chrome in `/Applications` (or set `CHROME_BIN`).
 
 `rotten.pem` isn't in the repo. Without it, `repack.sh` makes a new key, which means a new extension ID. Remove `key` from `extension/manifest.json` first, or `repack.sh` stops because the two IDs differ.
+
+---
+
+## Quick Start
+
+Installing Rotten opens the first-run page. Existing history is matched by the built-in rules and your bookmarks. One click of the **Delete** button deletes matches. After install, rules and bookmarks also delete new visits as they occur.
+
+### Rotten popup
+
+Click Rotten's extension icon while on any web page to make a rule for it. Saving the rule deletes the matching history you already have, and matching visits from then on. Before it deletes anything, Rotten shows how much and asks you to confirm.
+
+### Duplicates
+
+Lists the sites you've visited repeatedly, most repeats first. Click a site to see its pages and their visit counts; **Make rule** opens the Rules page with that page filled in. **Delete duplicates** counts every visit to the site, asks you to confirm, and deletes every visit to each page except the oldest. Nothing is deleted automatically.
+
+### Rules
+
+"Built-in" rules are active examples included when Rotten is installed. All rules can be edited or removed. Add your own!
+
+| Rule | Deletes |
+| --- | --- |
+| Apple sign-in | Every page on `idmsa.apple.com`. |
+| Google Apps | Every page on `accounts`, `calendar`, `chat`, `contacts`, `docs`, `drive`, `keep`, `mail`, and `meet.google.com`. |
+| Google search | `google.com/search` and `www.google.com/search`. |
+| DuckDuckGo | Searches (`duckduckgo.com/?q`) and ad clicks (`duckduckgo.com/y.js`). |
+| GitHub | `github.com/search`, `/sessions`, `/settings`, and a repo's edit and compare pages (`github.com/*/*/edit`, `github.com/*/*/compare`). |
+| LinkedIn | Every page on `linkedin.com` and its subdomains (`*.linkedin.com`). |
+| Authentication strings | Any URL whose host or path contains `login`, `logout`, `oauth`, `oauth2`, `authorize`, `auth`, `signin`, `sign-in`, `sign-on`, or `sso` as a whole word (as `grep -w` defines one: letters, digits, and `_` are word characters).|

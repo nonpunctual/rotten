@@ -7,7 +7,7 @@
 Rotten is a Google Chrome extension that keeps your browsing history from becoming rotten.
 
 - **Duplicates:** allows 1-click deletion of every repeat visit to a page keeping the first vist.
-- **Noise:** deletes entries that match: existing history when a rule is saved and later visits as they happen.
+- **Noise:** deletes entries that match - existing history when a rule is saved and later visits as they happen.
 - **Bookmarks:** bookmarking a page deletes its history and later visits to it are deleted if it's visited again (uses exact URL match.)
 
 Built-in rules:

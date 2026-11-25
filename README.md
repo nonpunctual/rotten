@@ -37,7 +37,7 @@ Rotten also includes `archive.chrome.history.sh`: a standalone script that backs
 
 ### Quick Start
 
-Installing Rotten opens the first-run page. It counts the existing history matched by the built-in rules and by your bookmarks and one click of the **Delete** button deletes. Rules and bookmarks duplicates are handled on new visits after install.
+Installing Rotten opens the first-run page. It counts the existing history matched by the built-in rules and by your bookmarks and one click of the **Delete** button deletes. After install, rules and bookmarks also delete new visits as they happen.
 
 ### Popup
 
@@ -77,7 +77,7 @@ The `.pkg` on the [latest release](https://github.com/nonpunctual/rotten/release
 
 The package only places files. To install the extension, open `rotten-policy.mobileconfig` and approve the profile in System Settings. The profile force-installs Rotten through Chrome policy (`ExtensionInstallForcelist`), so Developer mode isn't needed.
 
-### Building
+### Build
 
 ```sh
 ./repack.sh <version>

@@ -21,7 +21,11 @@ Rotten also includes `archive.chrome.history.sh`: a standalone script that backs
 
 <img src="docs/popup.png" width="391" alt="Popup"><br>
 
+---
+
 <img src="docs/duplicates.png" width="484" alt="Duplicates page"><br>
+
+---
 
 <img src="docs/rules.png" width="570" alt="Rules page">
 
@@ -52,8 +56,6 @@ The package only places files. To install the extension, open `rotten-policy.mob
 `repack.sh` sets the version in `extension/manifest.json`, packs `extension/` into `rotten-<version>.crx` signed with `rotten.pem`, writes `updates.xml` and `rotten-policy.mobileconfig` with the extension ID, and stages all three in `payload/Library/Application Support/Rotten/`. It needs Google Chrome in `/Applications` (or set `CHROME_BIN`).
 
 `rotten.pem` isn't in the repo. Without it, `repack.sh` makes a new key, which means a new extension ID. Remove `key` from `extension/manifest.json` first, or `repack.sh` stops because the two IDs differ.
-
----
 
 ## Quick Start
 
